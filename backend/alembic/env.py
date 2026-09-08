@@ -1,14 +1,27 @@
+"""Alembic migration environment (async engines supported)."""
 import asyncio
+import os
+import sys
 from logging.config import fileConfig
 from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
-from app.database import Base
-from app.models import *  # noqa: ensure all models loaded
+
+# Allow running alembic from the backend/ directory.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from app.database import Base  # noqa: E402
+from app.models import *  # noqa: F401,F403 ensure all models loaded
 
 config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 target_metadata = Base.metadata
+
+# DATABASE_URL in the environment takes precedence over alembic.ini
+# (used by Docker entrypoints and CI).
+env_url = os.getenv("DATABASE_URL")
+if env_url:
+    config.set_main_option("sqlalchemy.url", env_url)
 
 
 def run_migrations_offline() -> None:

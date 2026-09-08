@@ -1,47 +1,88 @@
+# CVE Explorer — production stack.
+# Usage:  docker compose up -d --build
+# Copy .env.example to .env and adjust secrets first.
+
 services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: cve_explorer
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5432:5432"
+      POSTGRES_DB: ${POSTGRES_DB:-cve_explorer}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-cve_explorer}"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}"]
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
 
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    ports:
-      - "8000:8000"
     environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/cve_explorer
-      REDIS_URL: redis://redis:6379/0
-      DEBUG: "true"
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-cve_explorer}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      APP_ENV: production
+      DEBUG: "false"
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      NVD_API_KEY: ${NVD_API_KEY:-}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      API_KEYS: ${API_KEYS:?Set API_KEYS in .env}
+      CORS_ORIGINS: ${CORS_ORIGINS:?Set CORS_ORIGINS in .env}
+      WEB_CONCURRENCY: ${WEB_CONCURRENCY:-2}
+      RATE_LIMIT_DEFAULT: ${RATE_LIMIT_DEFAULT:-60/minute}
+      RATE_LIMIT_LOOKUP: ${RATE_LIMIT_LOOKUP:-20/minute}
+      CACHE_TTL_CVE: ${CACHE_TTL_CVE:-86400}
+      CACHE_TTL_EPSS: ${CACHE_TTL_EPSS:-21600}
+      CACHE_TTL_KEV: ${CACHE_TTL_KEV:-43200}
+      # Backup script env
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      RETENTION_DAYS: ${RETENTION_DAYS:-14}
+      # The web service owns schema migrations.
+      RUN_MIGRATIONS: "true"
+    volumes:
+      - pgbackups:/backups
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
-    volumes:
-      - ./backend:/app
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/api/health && exit 0 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1G
 
   worker:
     build:
@@ -49,24 +90,86 @@ services:
       dockerfile: Dockerfile
     command: ["celery", "-A", "app.workers.celery_app", "worker", "-l", "info", "-c", "2"]
     environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/cve_explorer
-      REDIS_URL: redis://redis:6379/0
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-cve_explorer}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      APP_ENV: production
+      DEBUG: "false"
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      NVD_API_KEY: ${NVD_API_KEY:-}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      # Migrations are applied by the backend service only.
+      RUN_MIGRATIONS: "false"
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.workers.celery_app inspect ping --timeout 10 || exit 1"]
+      interval: 60s
+      timeout: 15s
+      start_period: 30s
+      retries: 3
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+
+  beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: ["celery", "-A", "app.workers.celery_app", "beat", "-l", "info"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-cve_explorer}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      APP_ENV: production
+      DEBUG: "false"
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      RUN_MIGRATIONS: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.workers.celery_app inspect ping --timeout 10 || exit 1"]
+      interval: 60s
+      timeout: 15s
+      start_period: 30s
+      retries: 3
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
 
   frontend:
     build:
       context: .
       dockerfile: Dockerfile.frontend
+      args:
+        VITE_API_URL: ${VITE_API_URL:-}
+        VITE_API_KEY: ${VITE_API_KEY:-}
     ports:
-      - "5173:5173"
+      - "${FRONTEND_PORT:-80}:8080"
     depends_on:
-      - backend
-    volumes:
-      - ./src:/app/src
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
 
 volumes:
   pgdata:
+  pgbackups:

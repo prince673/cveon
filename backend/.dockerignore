@@ -1,0 +1,14 @@
+venv
+__pycache__
+**/__pycache__
+*.pyc
+*.db
+*.sqlite3
+*.log
+.env
+server.log
+stderr*.log
+stdout.log
+.pytest_cache
+.ruff_cache
+control

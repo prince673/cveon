@@ -14,6 +14,7 @@ class EpssScore(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     cve_id = Column(String(20), index=True, unique=True, nullable=False)
     score = Column(Float, nullable=True)        # probability 0.0–1.0
+    previous_score = Column(Float, nullable=True)  # prior EPSS for trend detection
     percentile = Column(Float, nullable=True)    # 0.0–1.0
     model_version = Column(String(50), nullable=True)
     calculated_at = Column(DateTime, server_default=func.now())

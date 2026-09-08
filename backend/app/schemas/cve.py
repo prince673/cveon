@@ -59,6 +59,7 @@ class RiskSignal(BaseModel):
     value: float
     max: float
     weight: str
+    reason: Optional[str] = None
 
 
 class RiskAssessment(BaseModel):
@@ -68,6 +69,7 @@ class RiskAssessment(BaseModel):
     signals: list[RiskSignal]
     reasons: list[str]
     recommendation: str
+    trends: Optional[dict] = None
 
 
 class CVEResponse(BaseModel):
@@ -84,4 +86,3 @@ class CVEResponse(BaseModel):
     kev: Optional[KevData] = None
     exploits: list[ExploitInfo] = []
     risk: Optional[RiskAssessment] = None
-    affected_assets: list[dict] = []

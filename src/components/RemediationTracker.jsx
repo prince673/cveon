@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react'
 import {
   getRemediationForCVE, createRemediation, updateRemediation,
 } from '../services/api'
+import { PlusIcon } from './icons'
 
 const STATUSES = ['open', 'assigned', 'in_progress', 'fixed', 'verified', 'closed']
 const PRIORITIES = ['p1_critical', 'p2_high', 'p3_medium', 'p4_low']
@@ -64,42 +65,45 @@ export default function RemediationTracker({ cveId }) {
 
   return (
     <div className="card mb-5">
-      <div className="flex items-center gap-2 mb-4">
-        <span className="text-lg">🔧</span>
-        <h3 className="font-bold text-base text-white">Remediation Tracking</h3>
+      <header className="flex items-center gap-2.5 mb-4">
+        <h3 className="text-sm font-semibold text-white">Remediation tracking</h3>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="ml-auto text-xs text-accent-cyan hover:underline"
+          className="ml-auto btn-ghost !px-2.5 !py-1 text-xs"
         >
-          {showForm ? 'Cancel' : '+ Add Record'}
+          <PlusIcon size={12} />
+          {showForm ? 'Cancel' : 'Add record'}
         </button>
-      </div>
+      </header>
 
       {showForm && (
-        <div className="bg-dark-bg/60 border border-dark-border rounded-lg p-4 mb-4 space-y-3">
+        <div className="bg-dark-bg border border-dark-border rounded-lg p-4 mb-4 space-y-3">
           <input
             type="text"
-            placeholder="Assigned to (name/team)"
+            placeholder="Assigned to (name / team)"
             className="input-field text-sm"
             value={form.assignedTo}
             onChange={e => setForm(f => ({ ...f, assignedTo: e.target.value }))}
           />
-          <select
-            className="input-field text-sm"
-            value={form.priority}
-            onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}
-          >
-            {PRIORITIES.map(p => (
-              <option key={p} value={p}>{PRIORITY_LABELS[p]}</option>
-            ))}
-          </select>
-          <textarea
-            placeholder="Notes"
-            className="input-field text-sm h-16 resize-none"
-            value={form.notes}
-            onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-          />
-          <button onClick={handleCreate} className="btn-primary text-sm w-full">Create Record</button>
+          <div className="flex gap-3">
+            <select
+              className="input-field text-sm flex-1"
+              value={form.priority}
+              onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}
+            >
+              {PRIORITIES.map(p => (
+                <option key={p} value={p}>{PRIORITY_LABELS[p]}</option>
+              ))}
+            </select>
+            <input
+              type="text"
+              placeholder="Notes"
+              className="input-field text-sm flex-[2]"
+              value={form.notes}
+              onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+            />
+          </div>
+          <button onClick={handleCreate} className="btn-primary text-sm w-full">Create record</button>
         </div>
       )}
 
@@ -108,13 +112,13 @@ export default function RemediationTracker({ cveId }) {
       ) : (
         <div className="space-y-3">
           {records.map(rec => (
-            <div key={rec.id} className="bg-dark-bg/50 border border-dark-border/50 rounded-lg p-3">
+            <div key={rec.id} className="bg-dark-bg border border-dark-border/70 rounded-lg p-3.5">
               <div className="flex flex-wrap items-center gap-2 mb-2">
-                <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${STATUS_COLORS[rec.status]}`}>
+                <span className={`tag !py-0 !px-2 text-[10px] ${STATUS_COLORS[rec.status]}`}>
                   {STATUS_LABELS[rec.status]}
                 </span>
                 <span className="text-xs text-gray-500">{PRIORITY_LABELS[rec.priority]}</span>
-                {rec.assigned_to && <span className="text-xs text-gray-400">→ {rec.assigned_to}</span>}
+                {rec.assigned_to && <span className="text-xs text-gray-400">{rec.assigned_to}</span>}
               </div>
               {rec.notes && <p className="text-xs text-gray-500 mb-2">{rec.notes}</p>}
               {rec.history?.length > 0 && (

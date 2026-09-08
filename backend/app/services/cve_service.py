@@ -1,8 +1,9 @@
 """CVE data fetching, normalization, and storage across separate intelligence tables."""
 import httpx
 import asyncio
+import logging
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from ..config import get_settings
@@ -12,18 +13,77 @@ from ..models.epss import EpssScore
 from ..models.kev import KevEntry
 from ..models.exploit import ExploitSource
 
+logger = logging.getLogger(__name__)
+
 settings = get_settings()
 
 KEV_CACHE: dict = {}
 KEV_CACHE_TIME: float = 0
 KEV_TTL: float = 21600
 
+# Upstream throttling / transient failure statuses worth a retry.
+RETRY_STATUSES = settings.retry_statuses
+MAX_UPSTREAM_ATTEMPTS = max(1, settings.MAX_UPSTREAM_ATTEMPTS)
+RETRY_BACKOFF_BASE = 1.0
+RETRY_BACKOFF_CAP = 8.0
+
+
+def _retry_delay(attempt: int, retry_after: str | None) -> float:
+    """Delay before the next attempt: honour Retry-After, else exponential backoff."""
+    if retry_after:
+        try:
+            return min(float(retry_after), RETRY_BACKOFF_CAP)
+        except (TypeError, ValueError):
+            pass
+    return min(RETRY_BACKOFF_BASE * (2 ** attempt), RETRY_BACKOFF_CAP)
+
+
+async def _get_with_retry(
+    client: httpx.AsyncClient,
+    url: str,
+    *,
+    source: str,
+    params: dict | None = None,
+    headers: dict | None = None,
+) -> httpx.Response | None:
+    """GET with retry on upstream throttling (429/403) and 5xx.
+
+    Returns the final response, or None if every attempt failed at the
+    transport level. Callers still check ``status_code``.
+    """
+    last_resp: httpx.Response | None = None
+    for attempt in range(MAX_UPSTREAM_ATTEMPTS):
+        try:
+            resp = await client.get(url, params=params, headers=headers)
+        except httpx.HTTPError as exc:
+            if attempt == MAX_UPSTREAM_ATTEMPTS - 1:
+                logger.warning("%s request failed after %d attempts: %r", source, attempt + 1, exc)
+                return None
+            await asyncio.sleep(_retry_delay(attempt, None))
+            continue
+
+        last_resp = resp
+        if resp.status_code not in RETRY_STATUSES:
+            return resp
+
+        if attempt == MAX_UPSTREAM_ATTEMPTS - 1:
+            logger.warning("%s throttled/unavailable (HTTP %s) after %d attempts",
+                           source, resp.status_code, attempt + 1)
+            return resp
+
+        delay = _retry_delay(attempt, resp.headers.get("Retry-After"))
+        logger.info("%s returned HTTP %s — retrying in %.1fs (attempt %d/%d)",
+                    source, resp.status_code, delay, attempt + 1, MAX_UPSTREAM_ATTEMPTS)
+        await asyncio.sleep(delay)
+
+    return last_resp
+
 
 async def fetch_from_circl(cve_id: str) -> dict | None:
     try:
         async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.get(f"{settings.CIRCL_API}/cve/{cve_id}")
-            if resp.status_code == 200:
+            resp = await _get_with_retry(client, f"{settings.CIRCL_API}/cve/{cve_id}", source="CIRCL")
+            if resp is not None and resp.status_code == 200:
                 data = resp.json()
                 if data.get("id"):
                     return _normalize_circl(data)
@@ -32,11 +92,25 @@ async def fetch_from_circl(cve_id: str) -> dict | None:
     return None
 
 
+REQUIRED_NVD_HEADERS = {"Accept": "application/json"}
+
+
+def _nvd_headers() -> dict:
+    """NVD API v2 accepts an apiKey header to raise the request rate limit."""
+    headers = dict(REQUIRED_NVD_HEADERS)
+    if settings.NVD_API_KEY:
+        headers["apiKey"] = settings.NVD_API_KEY
+    return headers
+
+
 async def fetch_from_nvd(cve_id: str) -> dict | None:
     try:
-        async with httpx.AsyncClient(timeout=15) as client:
-            resp = await client.get(settings.NVD_API, params={"cveId": cve_id})
-            if resp.status_code == 200:
+        async with httpx.AsyncClient(timeout=settings.HTTP_TIMEOUT) as client:
+            resp = await _get_with_retry(
+                client, settings.NVD_API, source="NVD",
+                params={"cveId": cve_id}, headers=_nvd_headers(),
+            )
+            if resp is not None and resp.status_code == 200:
                 data = resp.json()
                 vulns = data.get("vulnerabilities", [])
                 if vulns:
@@ -47,10 +121,12 @@ async def fetch_from_nvd(cve_id: str) -> dict | None:
 
 
 async def fetch_cve(cve_id: str) -> dict:
-    result = await fetch_from_circl(cve_id)
+    """Fetch CVE data. NVD is the authoritative, fully up-to-date primary source;
+    CIRCL is a secondary fallback for CVEs NVD may not cover."""
+    result = await fetch_from_nvd(cve_id)
     if result:
         return result
-    result = await fetch_from_nvd(cve_id)
+    result = await fetch_from_circl(cve_id)
     if result:
         return result
     raise ValueError(f"CVE {cve_id} not found in any database.")
@@ -59,8 +135,8 @@ async def fetch_cve(cve_id: str) -> dict:
 async def fetch_epss_score(cve_id: str) -> dict | None:
     try:
         async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.get(settings.EPSS_API, params={"cve": cve_id})
-            if resp.status_code == 200:
+            resp = await _get_with_retry(client, settings.EPSS_API, source="EPSS", params={"cve": cve_id})
+            if resp is not None and resp.status_code == 200:
                 data = resp.json()
                 if data.get("data"):
                     item = data["data"][0]
@@ -79,8 +155,8 @@ async def fetch_kev_catalog() -> dict:
         return KEV_CACHE
     try:
         async with httpx.AsyncClient(timeout=30) as client:
-            resp = await client.get(settings.KEV_URL)
-            if resp.status_code == 200:
+            resp = await _get_with_retry(client, settings.KEV_URL, source="CISA KEV")
+            if resp is not None and resp.status_code == 200:
                 data = resp.json()
                 KEV_CACHE = {v["cveID"]: v for v in data.get("vulnerabilities", [])}
                 KEV_CACHE_TIME = time.time()
@@ -90,15 +166,25 @@ async def fetch_kev_catalog() -> dict:
     return KEV_CACHE
 
 
+def _github_headers() -> dict:
+    """GitHub search allows 60 req/h anonymously, 5000 req/h with a token."""
+    headers = {"Accept": "application/vnd.github.v3+json"}
+    if settings.GITHUB_TOKEN:
+        headers["Authorization"] = f"Bearer {settings.GITHUB_TOKEN}"
+    return headers
+
+
 async def fetch_exploits(cve_id: str) -> list[dict]:
     try:
         async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.get(
+            resp = await _get_with_retry(
+                client,
                 "https://api.github.com/search/repositories",
+                source="GitHub",
                 params={"q": f"{cve_id} exploit", "sort": "stars", "per_page": 5},
-                headers={"Accept": "application/vnd.github.v3+json"},
+                headers=_github_headers(),
             )
-            if resp.status_code == 200:
+            if resp is not None and resp.status_code == 200:
                 data = resp.json()
                 return [
                     {
@@ -140,7 +226,7 @@ async def _upsert_cvss(db: AsyncSession, cve_id: str, scores: list[dict]):
         if existing:
             for k, v in s.items():
                 setattr(existing, k, v)
-            existing.updated_at = datetime.utcnow()
+            existing.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         else:
             db.add(CvssScore(cve_id=cve_id, **s))
 
@@ -153,10 +239,12 @@ async def _upsert_epss(db: AsyncSession, cve_id: str, data: dict | None):
         select(EpssScore).where(EpssScore.cve_id == cve_id)
     )).scalar_one_or_none()
     if existing:
+        if existing.score is not None and data["score"] is not None:
+            existing.previous_score = existing.score
         existing.score = data["score"]
         existing.percentile = data["percentile"]
-        existing.calculated_at = datetime.utcnow()
-        existing.updated_at = datetime.utcnow()
+        existing.calculated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        existing.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     else:
         db.add(EpssScore(cve_id=cve_id, score=data["score"], percentile=data["percentile"]))
 
@@ -182,7 +270,7 @@ async def _upsert_kev(db: AsyncSession, cve_id: str, data: dict | None):
     if existing:
         for k, v in fields.items():
             setattr(existing, k, v)
-        existing.last_updated = datetime.utcnow()
+        existing.last_updated = datetime.now(timezone.utc).replace(tzinfo=None)
     else:
         db.add(KevEntry(cve_id=cve_id, **fields))
 
@@ -213,8 +301,9 @@ async def get_or_create_cve(db: AsyncSession, cve_id: str) -> dict:
     db_cve = result.scalar_one_or_none()
 
     if db_cve and db_cve.updated_at:
-        age_hours = (datetime.utcnow() - db_cve.updated_at).total_seconds() / 3600
-        if age_hours < 24:
+        age_hours = (datetime.now(timezone.utc).replace(tzinfo=None) - db_cve.updated_at).total_seconds() / 3600
+        record_complete = bool(db_cve.description)
+        if age_hours < 24 and record_complete:
             return await _assemble_cve_dict(db, db_cve)
 
     cve_data = await fetch_cve(cve_id)
@@ -224,7 +313,7 @@ async def get_or_create_cve(db: AsyncSession, cve_id: str) -> dict:
         for key in ("description", "published_date", "modified_date", "cwes", "products", "references"):
             if key in cve_data:
                 setattr(db_cve, key, cve_data[key])
-        db_cve.updated_at = datetime.utcnow()
+        db_cve.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     else:
         db_cve = CVE(
             cve_id=cve_id,
@@ -302,6 +391,7 @@ async def _assemble_cve_dict(db: AsyncSession, cve: CVE) -> dict:
         } if best_cvss else None,
         "epss": {
             "score": epss.score,
+            "previous_score": epss.previous_score,
             "percentile": epss.percentile,
             "calculated_at": epss.calculated_at.isoformat() if epss and epss.calculated_at else None,
         } if epss else None,
@@ -323,19 +413,28 @@ async def _assemble_cve_dict(db: AsyncSession, cve: CVE) -> dict:
 
 
 def _normalize_circl(data: dict) -> dict:
-    summary = data.get("summary", {})
+    summary_raw = data.get("summary", "")
+    if isinstance(summary_raw, dict):
+        description = summary_raw.get("description", "")
+    elif isinstance(summary_raw, str):
+        description = summary_raw
+    else:
+        description = str(summary_raw) if summary_raw else ""
+
     cvss_data = data.get("cvss") if isinstance(data.get("cvss"), dict) else {}
     cvss3_score = data.get("cvss3") or cvss_data.get("score")
-    cvss2_score = cvss_data.get("score")
-    best_score = cvss3_score or cvss2_score
+    cvss2_score = cvss_data.get("score") if data.get("cvss3") else cvss_data.get("score")
 
     cvss_scores = []
     if cvss3_score is not None:
+        vec = data.get("cvss3-vector")
+        if not vec and isinstance(data.get("cvss"), dict):
+            vec = data["cvss"].get("vector")
         cvss_scores.append({
             "version": "3.1",
             "score": cvss3_score,
             "severity": _severity_from_cvss(cvss3_score),
-            "vector_string": data.get("cvss3-vector") or data.get("cvss", {}).get("vector") if isinstance(data.get("cvss"), dict) else None,
+            "vector_string": vec,
             "attack_vector": None,
             "attack_complexity": None,
             "privileges_required": None,
@@ -345,7 +444,7 @@ def _normalize_circl(data: dict) -> dict:
             "integrity": None,
             "availability": None,
         })
-    if cvss2_score is not None:
+    if cvss2_score is not None and cvss2_score != cvss3_score:
         cvss_scores.append({
             "version": "2.0",
             "score": cvss2_score,
@@ -362,7 +461,7 @@ def _normalize_circl(data: dict) -> dict:
         })
 
     return {
-        "description": summary.get("description", data.get("summary", "")),
+        "description": description,
         "published_date": _parse_date(data.get("Published")),
         "modified_date": _parse_date(data.get("Modified")),
         "cvss_scores": cvss_scores,
@@ -374,21 +473,22 @@ def _normalize_circl(data: dict) -> dict:
 
 def _normalize_nvd(data: dict) -> dict:
     descriptions = data.get("descriptions", [])
-    desc = next((d["value"] for d in descriptions if d.get("language") == "en"), "")
+    desc = next((d["value"] for d in descriptions if d.get("lang") == "en"), "")
 
     metrics = data.get("metrics", {})
-    cvss31 = metrics.get("cvssMetricV31", [{}])[0] if metrics.get("cvssMetricV31") else None
-    cvss30 = metrics.get("cvssMetricV30", [{}])[0] if metrics.get("cvssMetricV30") else None
-    cvss2 = metrics.get("cvssMetricV2", [{}])[0] if metrics.get("cvssMetricV2") else None
+    cvss40 = next(iter(metrics.get("cvssMetricV40") or []), None)
+    cvss31 = next(iter(metrics.get("cvssMetricV31") or []), None)
+    cvss30 = next(iter(metrics.get("cvssMetricV30") or []), None)
+    cvss2 = next(iter(metrics.get("cvssMetricV2") or []), None)
 
     cvss_scores = []
-    for entry, ver in [(cvss31, "3.1"), (cvss30, "3.0"), (cvss2, "2.0")]:
+    for entry, ver in [(cvss40, "4.0"), (cvss31, "3.1"), (cvss30, "3.0"), (cvss2, "2.0")]:
         if entry:
-            cd = entry.get("cvssData", {})
+            cd = entry.get("cvssData", {}) or entry
             cvss_scores.append({
                 "version": ver,
-                "score": cd.get("baseScore") or entry.get("baseScore"),
-                "severity": _severity_from_cvss(cd.get("baseScore") or entry.get("baseScore")),
+                "score": cd.get("baseScore") or entry.get("baseScore") or entry.get("baseSeverity"),
+                "severity": entry.get("baseSeverity") or _severity_from_cvss(cd.get("baseScore") or entry.get("baseScore")),
                 "vector_string": cd.get("vectorString") or entry.get("vectorString"),
                 "attack_vector": cd.get("attackVector"),
                 "attack_complexity": cd.get("attackComplexity"),

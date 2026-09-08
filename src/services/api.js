@@ -1,13 +1,17 @@
-/**
- * Backend API client - replaces all client-side service modules.
- * All intelligence now comes from the FastAPI backend.
- */
+// Same-origin by default (Vite dev proxy / nginx proxy in production).
+// Override with VITE_API_URL if the API lives on a separate origin.
+const API_BASE = import.meta.env.VITE_API_URL || ''
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+// Only needed when the backend runs with API_KEYS set (protects write endpoints).
+const API_KEY = import.meta.env.VITE_API_KEY || ''
+
+function authHeaders() {
+  return API_KEY ? { 'X-API-Key': API_KEY } : {}
+}
 
 async function apiFetch(path, options = {}) {
   const resp = await fetch(`${API_BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...options.headers },
+    headers: { 'Content-Type': 'application/json', ...authHeaders(), ...options.headers },
     ...options,
   })
   if (!resp.ok) {
@@ -21,32 +25,12 @@ export async function lookupCVE(cveId) {
   return apiFetch(`/api/cve/${encodeURIComponent(cveId)}`)
 }
 
-export async function fetchCVEEnrichments(cveId) {
-  return apiFetch(`/api/cve/${encodeURIComponent(cveId)}/enrichments`)
+export async function batchLookup(cveIds) {
+  return apiFetch('/api/cve/batch', { method: 'POST', body: JSON.stringify({ cve_ids: cveIds }) })
 }
 
-export async function fetchAffectedAssets(cveId) {
-  return apiFetch(`/api/cve/${encodeURIComponent(cveId)}/assets`)
-}
-
-export async function listAssets() {
-  return apiFetch('/api/assets/')
-}
-
-export async function createAsset(data) {
-  return apiFetch('/api/assets/', { method: 'POST', body: JSON.stringify(data) })
-}
-
-export async function deleteAsset(assetId) {
-  return apiFetch(`/api/assets/${assetId}`, { method: 'DELETE' })
-}
-
-export async function getAssetSummary() {
-  return apiFetch('/api/assets/summary')
-}
-
-export async function getAssetCVEs(assetId) {
-  return apiFetch(`/api/assets/${assetId}/cves`)
+export async function compareCVEs(cveIds) {
+  return apiFetch('/api/cve/compare', { method: 'POST', body: JSON.stringify({ cve_ids: cveIds }) })
 }
 
 export async function getRemediationForCVE(cveId) {
@@ -59,10 +43,6 @@ export async function createRemediation(data) {
 
 export async function updateRemediation(recordId, data) {
   return apiFetch(`/api/remediation/${recordId}`, { method: 'PATCH', body: JSON.stringify(data) })
-}
-
-export async function getRemediationStats() {
-  return apiFetch('/api/remediation/stats/overview')
 }
 
 export async function listAlerts(opts = {}) {

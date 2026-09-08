@@ -1,35 +1,34 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ['./index.html', './src/**/*.{js,jsx}'],
-  darkMode: 'class',
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'sans-serif'],
-        mono: ['JetBrains Mono', 'monospace'],
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
       },
       colors: {
         dark: {
-          bg:    '#0a0d14',
-          bg2:   '#111520',
-          bg3:   '#161b2e',
-          card:  '#1a2035',
-          card2: '#1e2640',
-          border:'#2a3450',
+          bg:    '#0a0c10',
+          bg2:   '#0d1015',
+          bg3:   '#12151c',
+          card:  '#141822',
+          card2: '#1a1f2a',
+          border:'#232a36',
         },
         accent: {
-          cyan:   '#00d4ff',
-          purple: '#7c3aed',
-          amber:  '#f59e0b',
+          cyan:   '#5b8def',
+          purple: '#7b83d4',
+          amber:  '#d9a03f',
         },
       },
       animation: {
-        'fade-up': 'fadeUp 0.35s ease both',
+        'fade-up': 'fadeUp 0.3s ease both',
         'spin-slow': 'spin 1s linear infinite',
       },
       keyframes: {
         fadeUp: {
-          from: { opacity: 0, transform: 'translateY(12px)' },
+          from: { opacity: 0, transform: 'translateY(8px)' },
           to:   { opacity: 1, transform: 'translateY(0)' },
         },
       },

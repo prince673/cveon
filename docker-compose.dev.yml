@@ -1,0 +1,70 @@
+# CVE Explorer — local development stack.
+# Usage:  docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+# Frontend served by the Vite dev server (HMR) on :5173; backend reloads on save.
+
+services:
+  db:
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: postgres
+
+  redis:
+    ports:
+      - "6379:6379"
+    command: ["redis-server"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+
+  backend:
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    environment:
+      APP_ENV: development
+      DEBUG: "true"
+      LOG_LEVEL: DEBUG
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/cve_explorer
+      REDIS_URL: redis://redis:6379/0
+      API_KEYS: ""
+      CORS_ORIGINS: "http://localhost:5173,http://localhost:3000,http://localhost:8080"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+
+  worker:
+    command: ["celery", "-A", "app.workers.celery_app", "worker", "-l", "debug", "-c", "2"]
+    environment:
+      APP_ENV: development
+      DEBUG: "true"
+      LOG_LEVEL: DEBUG
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/cve_explorer
+      REDIS_URL: redis://redis:6379/0
+      RUN_MIGRATIONS: "false"
+    volumes:
+      - ./backend:/app
+
+  beat:
+    command: ["celery", "-A", "app.workers.celery_app", "beat", "-l", "debug"]
+    environment:
+      APP_ENV: development
+      DEBUG: "true"
+      LOG_LEVEL: DEBUG
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/cve_explorer
+      REDIS_URL: redis://redis:6379/0
+      RUN_MIGRATIONS: "false"
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    build: !reset null
+    image: node:20-alpine
+    command: ["sh", "-c", "npm install && npm run dev -- --host 0.0.0.0"]
+    working_dir: /app
+    volumes:
+      - .:/app
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: ""
+    depends_on:
+      - backend

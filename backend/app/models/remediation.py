@@ -6,7 +6,6 @@ from typing import Optional
 from sqlalchemy import (
     Column,
     DateTime,
-    ForeignKey,
     Integer,
     String,
     Text,
@@ -22,9 +21,8 @@ class RemediationRecord(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     cve_id = Column(String(20), index=True, nullable=False)
-    asset_id = Column(Integer, ForeignKey("assets.id"), nullable=True)
-    status = Column(String(20), nullable=False)
-    priority = Column(String(20), nullable=False)
+    status = Column(String(20), nullable=False, index=True)
+    priority = Column(String(20), nullable=False, index=True)
     assigned_to = Column(String(100), nullable=True)
     notes = Column(Text, nullable=True)
     due_date = Column(DateTime, nullable=True)

@@ -2,11 +2,8 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from ..models.cve import CVE
-from ..models.cvss import CvssScore
-from ..models.epss import EpssScore
 from ..models.kev import KevEntry
 from ..models.exploit import ExploitSource
-from ..models.asset import Asset, AssetSoftware
 from ..models.alert import Alert
 from ..models.remediation import RemediationRecord
 
@@ -21,18 +18,8 @@ async def get_dashboard_stats(db: AsyncSession) -> dict:
         select(func.count()).select_from(CVE).where(CVE.risk_level == "High")
     )).scalar() or 0
 
-    total_assets = (await db.execute(select(func.count()).select_from(Asset))).scalar() or 0
-    internet_facing = (await db.execute(
-        select(func.count()).select_from(Asset).where(Asset.internet_facing == True)
-    )).scalar() or 0
-
-    total_sw = (await db.execute(select(func.count()).select_from(AssetSoftware))).scalar() or 0
-    eol_sw = (await db.execute(
-        select(func.count()).select_from(AssetSoftware).where(AssetSoftware.end_of_life == True)
-    )).scalar() or 0
-
     unread_alerts = (await db.execute(
-        select(func.count()).select_from(Alert).where(Alert.read == False)
+        select(func.count()).select_from(Alert).where(Alert.read.is_(False))
     )).scalar() or 0
 
     open_remediations = (await db.execute(
@@ -54,10 +41,6 @@ async def get_dashboard_stats(db: AsyncSession) -> dict:
         "totalCVEs": total_cves,
         "criticalCVEs": critical_cves,
         "highCVEs": high_cves,
-        "totalAssets": total_assets,
-        "internetFacingAssets": internet_facing,
-        "totalSoftware": total_sw,
-        "eolSoftware": eol_sw,
         "unreadAlerts": unread_alerts,
         "openRemediations": open_remediations,
         "kevEntries": kev_count,

@@ -21,9 +21,9 @@ class CVE(Base):
     cwes = Column(JSON, default=list)
     products = Column(JSON, default=list)
     references = Column(JSON, default=list)
-    risk_score = Column(Float, nullable=True)
-    risk_level = Column(String(20), nullable=True)
-    priority = Column(String(5), nullable=True)  # P1, P2, P3, P4
+    risk_score = Column(Float, nullable=True, index=True)
+    risk_level = Column(String(20), nullable=True, index=True)
+    priority = Column(String(5), nullable=True, index=True)  # P1, P2, P3, P4
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, onupdate=func.now())
 

@@ -27,7 +27,7 @@ class Alert(Base):
     severity = Column(String(20), nullable=False)
     cve_id = Column(String(20), nullable=True, index=True)
     source = Column(String(50), nullable=True)
-    read = Column(Boolean, default=False)
+    read = Column(Boolean, default=False, index=True)
     acknowledged = Column(Boolean, default=False)
     created_at = Column(DateTime, server_default=func.now())
 
