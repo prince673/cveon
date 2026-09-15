@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,44 +6,151 @@
 
 @layer base {
   html { scroll-behavior: smooth; }
-  body { @apply bg-dark-bg text-gray-200 font-sans antialiased; }
 
-  ::selection { background: rgba(91, 141, 239, 0.25); }
+  body {
+    @apply bg-dark-bg text-gray-200 font-sans antialiased;
+    background-image:
+      radial-gradient(900px 600px at 80% -15%,  rgba(91, 141, 239, 0.12), transparent 60%),
+      radial-gradient(700px 500px at -15% 25%,  rgba(123, 131, 212, 0.09), transparent 55%),
+      radial-gradient(600px 400px at 50% 115%,  rgba(232, 121, 160, 0.05), transparent 60%),
+      radial-gradient(400px 300px at 90%  80%,  rgba(217, 160, 63,  0.04), transparent 55%);
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
 
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::selection { background: rgba(91, 141, 239, 0.28); }
+
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { @apply bg-white/10 rounded-full; }
-  ::-webkit-scrollbar-thumb:hover { @apply bg-white/20; }
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full;
+    background: rgba(255,255,255,0.09);
+  }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.18); }
 }
 
 @layer components {
+  /* ── Cards ─────────────────────────────────────────────── */
   .card {
-    @apply bg-dark-card border border-dark-border rounded-xl p-6 animate-fade-up;
+    @apply bg-dark-card border border-dark-border rounded-2xl p-6 animate-fade-up;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.04), inset 0 1px 0 rgba(255,255,255,0.05);
+    transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
   }
+  .card:hover {
+    border-color: rgba(255,255,255,0.09);
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.06), inset 0 1px 0 rgba(255,255,255,0.06),
+                0 16px 48px -16px rgba(0,0,0,0.6);
+    transform: translateY(-1px);
+  }
+  .card-flat {
+    @apply bg-dark-card border border-dark-border rounded-2xl p-6 animate-fade-up;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.04), inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+
+  /* ── Buttons ────────────────────────────────────────────── */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg
-           font-semibold text-sm text-white bg-accent-cyan
-           hover:bg-accent-cyan/90 active:scale-[0.98]
-           transition-colors duration-150
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl
+           font-semibold text-sm text-white
+           active:scale-[0.97]
+           transition-all duration-200
            disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100;
+    background: linear-gradient(135deg, #5b8def 0%, #6a6fdf 50%, #7b83d4 100%);
+    background-size: 200% 200%;
+    box-shadow: 0 4px 20px -4px rgba(91,141,239,0.5), 0 1px 0 rgba(255,255,255,0.12) inset;
   }
+  .btn-primary:hover:not(:disabled) {
+    box-shadow: 0 8px 32px -4px rgba(91,141,239,0.65), 0 1px 0 rgba(255,255,255,0.14) inset;
+    background-position: right center;
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+  }
+
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg
-           text-sm font-medium border border-dark-border text-gray-400
-           hover:text-gray-200 hover:border-white/20
-           transition-colors duration-150;
+    @apply inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl
+           text-sm font-medium text-gray-400
+           transition-all duration-200;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.03);
   }
+  .btn-ghost:hover {
+    color: rgba(255,255,255,0.9);
+    border-color: rgba(255,255,255,0.16);
+    background: rgba(255,255,255,0.06);
+    transform: translateY(-1px);
+  }
+  .btn-ghost:active { transform: scale(0.97); }
+
+  /* ── Input ──────────────────────────────────────────────── */
   .input-field {
-    @apply w-full px-4 py-2.5 rounded-lg font-mono text-sm bg-dark-bg
-           border border-dark-border text-gray-100 placeholder-gray-600
-           focus:outline-none focus:border-accent-cyan/70 focus:ring-2
-           focus:ring-accent-cyan/20 transition-shadow duration-150;
+    @apply w-full px-4 py-3 rounded-xl font-mono text-sm
+           text-gray-100 placeholder-gray-600
+           focus:outline-none transition-all duration-200;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
   }
+  .input-field:focus {
+    border-color: rgba(91,141,239,0.6);
+    background: rgba(255,255,255,0.06);
+    box-shadow: 0 0 0 3px rgba(91,141,239,0.15), 0 0 20px -4px rgba(91,141,239,0.25);
+  }
+
+  /* ── Tags / Badges ──────────────────────────────────────── */
   .tag {
     @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full
            text-xs font-semibold border;
   }
-  .section-label {
-    @apply text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-500;
+  .pill {
+    @apply inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.04);
   }
+
+  /* ── Typography helpers ─────────────────────────────────── */
+  .section-label {
+    @apply text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-500;
+  }
+  .gradient-text {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #5b8def, #9b8fef, #e879a0);
+    background-size: 200% 200%;
+    animation: gradientX 5s ease infinite;
+  }
+
+  /* ── Stat box ───────────────────────────────────────────── */
+  .stat-box {
+    @apply flex flex-col gap-1 rounded-xl px-4 py-3.5;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .stat-box:hover {
+    background: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.12);
+  }
+
+  /* ── Data source indicator ──────────────────────────────── */
+  .source-pill {
+    @apply inline-flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1 rounded-full;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.07);
+    color: rgba(255,255,255,0.35);
+  }
+}
+
+@layer utilities {
+  .skeleton {
+    @apply rounded-xl;
+    background: linear-gradient(90deg, #111520 25%, #161b26 50%, #111520 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.8s linear infinite;
+  }
+  .glass {
+    background: rgba(17, 21, 32, 0.75);
+    backdrop-filter: blur(16px) saturate(1.4);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  }
+  .glow-cyan  { box-shadow: 0 0 20px -4px rgba(91,141,239,0.5); }
+  .glow-red   { box-shadow: 0 0 20px -4px rgba(229,72,77,0.5); }
+  .glow-amber { box-shadow: 0 0 20px -4px rgba(217,160,63,0.5); }
+  .glow-green { box-shadow: 0 0 20px -4px rgba(48,164,108,0.5); }
 }

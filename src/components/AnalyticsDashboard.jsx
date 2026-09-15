@@ -15,6 +15,22 @@ function BarRow({ label, value, max, color }) {
   )
 }
 
+function StatCard({ label, value, accent }) {
+  return (
+    <div className="card text-center py-5">
+      <div className={`text-2xl md:text-3xl font-semibold leading-none ${accent}`}>{value}</div>
+      <div className="text-xs text-gray-500 mt-1.5">{label}</div>
+    </div>
+  )
+}
+
+const STATS = [
+  { label: 'CVEs indexed', get: a => a.totalCVEs || 0, accent: 'text-accent-cyan' },
+  { label: 'Critical risk', get: a => a.criticalCVEs || 0, accent: 'text-red-400' },
+  { label: 'High risk', get: a => a.highCVEs || 0, accent: 'text-orange-400' },
+  { label: 'KEV entries', get: a => a.kevEntries || 0, accent: 'text-purple-400' },
+]
+
 export default function AnalyticsDashboard() {
   const [analytics, setAnalytics] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -30,25 +46,41 @@ export default function AnalyticsDashboard() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 gap-3 text-gray-400">
-        <div className="relative w-10 h-10">
-          <div className="absolute inset-0 rounded-full border-2 border-dark-border" />
-          <div className="absolute inset-0 rounded-full border-2 border-t-accent-cyan animate-spin-slow" />
+      <div className="space-y-5 animate-fade-in">
+        <div className="flex items-center gap-2.5">
+          <span className="skeleton w-7 h-7" />
+          <div className="skeleton h-4 w-28" />
         </div>
-        <p className="text-sm animate-pulse">Loading analytics…</p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[0, 1, 2, 3].map(i => (
+            <div key={i} className="card text-center py-5 space-y-2">
+              <div className="skeleton h-6 w-12 mx-auto" />
+              <div className="skeleton h-3 w-20 mx-auto" />
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {[0, 1].map(i => (
+            <div key={i} className="card space-y-3">
+              <div className="skeleton h-3 w-32" />
+              {[0, 1, 2, 3].map(j => (
+                <div key={j} className="skeleton h-3 w-full" />
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
     )
   }
 
   if (!analytics) {
     return (
-      <div className="card text-center py-10">
+      <div className="card text-center py-10 animate-fade-in">
         <p className="text-sm text-gray-500">Analytics are unavailable right now.</p>
       </div>
     )
   }
 
-  const totalCVEs = analytics.totalCVEs || 0
   const cveBars = [
     { label: 'P1 (critical)', value: analytics.p1Count || 0, color: '#e5484d' },
     { label: 'P2 (high)', value: analytics.p2Count || 0, color: '#f76808' },
@@ -76,16 +108,8 @@ export default function AnalyticsDashboard() {
       </header>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { label: 'CVEs indexed', value: totalCVEs, accent: 'text-accent-cyan' },
-          { label: 'Critical risk', value: analytics.criticalCVEs || 0, accent: 'text-red-400' },
-          { label: 'High risk', value: analytics.highCVEs || 0, accent: 'text-orange-400' },
-          { label: 'KEV entries', value: analytics.kevEntries || 0, accent: 'text-purple-400' },
-        ].map(s => (
-          <div key={s.label} className="card text-center py-4">
-            <div className={`text-2xl font-semibold ${s.accent}`}>{s.value}</div>
-            <div className="text-xs text-gray-500 mt-0.5">{s.label}</div>
-          </div>
+        {STATS.map(s => (
+          <StatCard key={s.label} label={s.label} value={s.get(analytics)} accent={s.accent} />
         ))}
       </div>
 

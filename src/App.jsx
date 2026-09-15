@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
 import DisclaimerModal      from './components/DisclaimerModal'
 import Header               from './components/Header'
 import InputForm            from './components/InputForm'
@@ -10,34 +10,29 @@ import Footer               from './components/Footer'
 import RiskScoreCard        from './components/RiskScoreCard'
 import ExploitabilityCard   from './components/ExploitabilityCard'
 import RemediationTracker   from './components/RemediationTracker'
-import AlertPanel           from './components/AlertPanel'
 import AnalyticsDashboard   from './components/AnalyticsDashboard'
 import BatchView            from './components/BatchView'
 import CompareView          from './components/CompareView'
-import { lookupCVE, getUnreadAlertCount } from './services/api'
+import { lookupCVE }        from './services/api'
 import { buildGuide }       from './utils/guideEngine'
 
 const VIEWS = {
   HOME: 'home',
   RESULTS: 'results',
   ANALYTICS: 'analytics',
-  ALERTS: 'alerts',
   BATCH: 'batch',
   COMPARE: 'compare',
 }
 
 export default function App() {
   const [view, setView] = useState(VIEWS.HOME)
+  const [prevView, setPrevView] = useState(null)
   const [cveData, setCveData] = useState(null)
   const [guide, setGuide] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [alertCount, setAlertCount] = useState(0)
   const searchGenRef = useRef(0)
 
-  useEffect(() => {
-    getUnreadAlertCount().then(d => setAlertCount(d.count ?? 0)).catch(() => setAlertCount(0))
-  }, [view])
 
   function handleReset() {
     setCveData(null)
@@ -53,7 +48,15 @@ export default function App() {
       setGuide(null)
       setError(null)
     }
+    setPrevView(view)
     setView(newView)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  function handleBack() {
+    const backTo = prevView ?? VIEWS.HOME
+    setPrevView(null)
+    setView(backTo)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -86,8 +89,6 @@ export default function App() {
 
       setLoading(false)
 
-      getUnreadAlertCount().then(d => setAlertCount(d.count ?? 0)).catch(() => {})
-
       setTimeout(() => {
         if (gen === searchGenRef.current) {
           document.getElementById('results')?.scrollIntoView({ behavior: 'smooth' })
@@ -104,9 +105,18 @@ export default function App() {
   return (
     <div className="min-h-screen bg-dark-bg text-gray-200 flex flex-col">
       <DisclaimerModal />
-      <Header view={view} onNavigate={handleNavigate} alertCount={alertCount} />
+      <Header view={view} onNavigate={handleNavigate} />
 
       <main className="flex-1 max-w-4xl mx-auto w-full px-4 py-8">
+        {/* Universal back button for all non-home views */}
+        {view !== VIEWS.HOME && (
+          <button
+            onClick={handleBack}
+            className="btn-ghost mb-5 flex items-center gap-1.5"
+          >
+            ← Back
+          </button>
+        )}
         {view === VIEWS.HOME && (
           <>
             <InputForm onSubmit={handleSearch} loading={loading} />
@@ -165,8 +175,6 @@ export default function App() {
         {view === VIEWS.COMPARE && <CompareView onReset={handleReset} />}
 
         {view === VIEWS.ANALYTICS && <AnalyticsDashboard />}
-
-        {view === VIEWS.ALERTS && <AlertPanel />}
       </main>
 
       <Footer />

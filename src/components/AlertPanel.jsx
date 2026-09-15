@@ -26,7 +26,7 @@ const FILTERS = [
 
 export default function AlertPanel() {
   const [filter, setFilter] = useState('all')
-  const [alerts, setAlerts] = useState([])
+  const [alerts, setAlerts] = useState(null)
   const [unread, setUnread] = useState(0)
   const [tick, setTick] = useState(0)
   const bump = useCallback(() => setTick(t => t + 1), [])
@@ -51,7 +51,7 @@ export default function AlertPanel() {
         <h3 className="text-sm font-semibold text-white">Alerts</h3>
         {unread > 0 && (
           <span className="bg-red-500 text-white text-[10px] font-semibold min-w-[16px] h-4 px-1
-                           rounded-full flex items-center justify-center">
+                           rounded-full flex items-center justify-center animate-scale-in">
             {unread}
           </span>
         )}
@@ -65,7 +65,7 @@ export default function AlertPanel() {
           <button
             key={ff.key}
             onClick={() => setFilter(ff.key)}
-            className={`text-xs px-3 py-1.5 rounded-full border whitespace-nowrap transition-colors ${
+            className={`text-xs px-3 py-1.5 rounded-full border whitespace-nowrap transition-all duration-150 ${
               filter === ff.key
                 ? 'border-accent-cyan/50 text-accent-cyan bg-accent-cyan/10'
                 : 'border-dark-border text-gray-500 hover:text-gray-300 hover:border-white/20'
@@ -76,8 +76,27 @@ export default function AlertPanel() {
         ))}
       </div>
 
-      {alerts.length === 0 ? (
-        <p className="text-sm text-gray-500 text-center py-6">No alerts.</p>
+      {alerts === null ? (
+        <div className="space-y-2">
+          {[0, 1, 2, 3, 4].map(i => (
+            <div key={i} className="flex items-start gap-3 p-3.5">
+              <div className="skeleton w-2 h-2 rounded-full mt-1.5 shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="skeleton h-3.5 w-1/3" />
+                <div className="skeleton h-3 w-full" />
+                <div className="skeleton h-3 w-2/3" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : alerts.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-10 gap-3 text-center animate-fade-in">
+          <span className="flex items-center justify-center w-11 h-11 rounded-xl
+                           bg-white/[0.04] border border-dark-border text-gray-600">
+            <BellIcon size={18} />
+          </span>
+          <p className="text-sm text-gray-500">No alerts{filter !== 'all' ? ' match this filter' : ''}.</p>
+        </div>
       ) : (
         <div className="space-y-2 max-h-96 overflow-y-auto pr-0.5">
           {alerts.slice(0, 50).map(alert => (
