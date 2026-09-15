@@ -1,156 +1,30 @@
-# CVE Explorer
+# CVEon
 
-A vulnerability intelligence platform with multi-source CVE enrichment, explainable risk scoring, exploitation guides, batch analysis, CVE comparison, and remediation tracking.
+CVEon is a vulnerability intelligence platform designed for security engineers and researchers. It aggregates CVE telemetry, computes risk scores, and provides testing guides for authorized vulnerability assessments.
 
-## Architecture
+## What It Does
 
-```
-React (Vite SPA) → Nginx → FastAPI Backend → PostgreSQL
-                                 ↓
-                      ┌──────────┼──────────┐
-                      ↓          ↓          ↓
-                 CVE Service  Risk Engine  Guide Engine
-                      ↓          ↓          ↓
-                 CIRCL/NVD    EPSS/KEV    EPSS/KEV
-                      └──────────┬──────────┘
-                                 ↓
-                          Remediation + Alerts
-                                 ↓
-                           Celery worker/beat + Redis
-```
+- **CVE Telemetry & Enrichment**: Queries vulnerability data across NVD, CIRCL, CISA KEV (Known Exploited Vulnerabilities), and FIRST EPSS (Exploit Prediction Scoring System).
+- **Explainable Risk Scoring**: Evaluates real-world risk based on CVSS scores, active exploitation indicators, and EPSS percentiles.
+- **Exploitation & Verification Guides**: Provides structured testing steps and payload concepts for authorized remediation and security verification.
+- **Batch Analysis & Compare**: Analyzes lists of CVEs simultaneously and compares vulnerability attributes side-by-side.
+- **Remediation Tracking**: Monitors remediation progress, tracking status and mitigation notes.
 
-Clients may authenticate with either header:
+## Quick Start
 
-```
-X-API-Key: <key>
-Authorization: Bearer <key>
-```
-
-Responses: `401` when the key is missing, `403` when it is wrong. Leaving `API_KEYS` empty
-disables auth entirely (fine for a local or trusted-network deployment).
-
-## Backups
-
-`backend/scripts/backup_db.sh` writes a compressed, timestamped `pg_dump` to the `pgbackups`
-volume (mounted at `/backups` in the backend container) and prunes dumps older than
-`RETENTION_DAYS`.
-
-```bash
-# One-off backup
-docker compose exec backend sh scripts/backup_db.sh
-
-# Nightly at 03:15 via host cron
-15 3 * * * cd /srv/cve-explorer && docker compose exec -T backend sh scripts/backup_db.sh >> /var/log/cve-backup.log 2>&1
-
-# Restore (destructive)
-docker compose exec -T db psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" < dump.sql
-```
-
-## Local development
-
-### Option A — Docker with hot reload
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up
-```
-
-- Frontend (Vite dev server): http://localhost:5173
-- Backend (auto-reload): http://localhost:8000
-
-### Option B — Manual
-
-**Backend:**
-```bash
-cd backend
-python3 -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env          # defaults to SQLite — flip to PostgreSQL for prod parity
-alembic upgrade head          # apply schema migrations
-uvicorn app.main:app --reload --port 8000
-```
-
-**Frontend:**
+### Frontend (Client-only / Development)
 ```bash
 npm install
-npm run dev                   # Vite proxies /api -> http://localhost:8000
+npm run dev
 ```
+Runs the client dashboard locally at `http://localhost:5173`.
 
-## Database migrations
-
-Schema is managed with Alembic. The baseline migration creates the full schema (including the EPSS `previous_score` column used for trend tracking).
-
+### Full Stack (Docker)
 ```bash
-# In backend/, with DATABASE_URL set (env var wins over alembic.ini)
-alembic upgrade head          # apply
-alembic revision --autogenerate -m "describe change"   # create a new migration
+docker compose up -d --build
 ```
+Runs the frontend, FastAPI backend, PostgreSQL, and Redis stack at `http://localhost:80`.
 
-The production entrypoint runs `alembic upgrade head` automatically before starting the API.
+## Disclaimer
 
-## API Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/cve/{id}` | Full CVE lookup with enrichment + risk |
-| GET | `/api/cve/{id}/enrichments` | EPSS, KEV, exploit data |
-| POST | `/api/cve/batch` | Batch lookup (up to 20 CVEs), consolidated risk summary |
-| POST | `/api/cve/compare` | Side-by-side comparison (up to 3 CVEs) |
-| GET | `/api/remediation/{cve_id}` | Remediation records |
-| POST | `/api/remediation/` | Create record 🔒 |
-| PATCH | `/api/remediation/{id}` | Update status 🔒 |
-| GET | `/api/alerts/` | List alerts |
-| GET | `/api/alerts/unread-count` | Unread count |
-| PATCH | `/api/alerts/{id}/read` | Mark alert read 🔒 |
-| POST | `/api/alerts/read-all` | Mark all read 🔒 |
-| PATCH | `/api/alerts/{id}/acknowledge` | Acknowledge alert 🔒 |
-| GET | `/api/analytics/dashboard` | Dashboard stats |
-| GET | `/api/health` | Health check (DB-aware) |
-
-🔒 = requires an API key when `API_KEYS` is set. Malformed CVE IDs are rejected with `422`
-before any upstream call, and lookups are rate-limited (`20/minute` by default).
-
-## Features
-
-- **Multi-source CVE intelligence** (NVD, CIRCL, EPSS, CISA KEV, GitHub exploits)
-- **Explainable risk scoring** (P1–P4) with per-signal factor breakdown, CVSS v4.0, EPSS trend arrows, and custom weight overrides
-- **Exploitation guides** — 35 vulnerability-class templates with confidence-scored classification, detection/exploitation/mitigation steps, MITRE ATT&CK mapping, and live PoC integration
-- **Batch CVE analysis** — paste or upload a list of CVEs, get a sortable/filterable risk dashboard
-- **CVE comparison** — side-by-side risk, CVSS, EPSS, and KEV comparison for up to 3 CVEs
-- **Remediation lifecycle** tracking (Open → Closed)
-- **Alerting** for KEV additions and EPSS spikes
-- **Analytics dashboard** with severity/risk distributions
-- **Production hardening** — env-driven config, structured logging with request IDs, rate limiting (SlowAPI), gunicorn/Uvicorn workers, DB-aware health checks, Alembic migrations, optional API-key auth, upstream retry with `Retry-After` backoff, non-root containers, and scripted backups
-
-## Development commands
-
-```bash
-npm test          # Run frontend tests
-npm run lint      # Check code quality (ESLint)
-npm run build     # Production build
-```
-
-## Go-live checklist
-
-Run through this on the target host before opening the app to users:
-
-- [ ] `cp .env.example .env`, then set `POSTGRES_PASSWORD`, `NVD_API_KEY`, and — if internet-facing — `API_KEYS` + `VITE_API_KEY`
-- [ ] Set `CORS_ORIGINS` to your real origin (e.g. `https://cve.example.com`)
-- [ ] `docker compose up -d --build`, then `docker compose ps` — every service should be `healthy`
-- [ ] `curl http://localhost:8080/api/health` returns `{"status":"ok"...}` (503 means the DB is unreachable)
-- [ ] Confirm migrations ran: `docker compose logs backend | grep -i alembic`
-- [ ] Confirm workers are consuming: `docker compose logs worker | grep -i ready`
-- [ ] Trigger a task once: `docker compose exec worker celery -A app.workers.celery_app call workers.check_new_kev`
-- [ ] Smoke a real lookup and a batch of ~10 CVEs; watch for `429`/`403` in backend logs (means the NVD key is missing or throttled)
-- [ ] Terminate TLS in front of the app (nginx TLS, Caddy, or a cloud load balancer) — the stack serves plain HTTP on `FRONTEND_PORT`
-- [ ] Restrict host firewall to the reverse-proxy port only
-- [ ] Schedule `backup_db.sh` via cron and verify one restore into a scratch database
-- [ ] Push the repo so GitHub Actions CI runs (frontend lint/test/build + backend import against PostgreSQL)
-
-## Tech Stack
-
-- **Frontend:** React 19 + Vite + Tailwind CSS, served by nginx
-- **Backend:** FastAPI + Python 3.12 (gunicorn + Uvicorn)
-- **Database:** PostgreSQL 16 (SQLite for local dev), Alembic migrations
-- **Cache/Broker:** Redis 7
-- **Workers:** Celery
-- **Deployment:** Docker Compose, GitHub Actions CI
+This tool is intended strictly for authorized security research, vulnerability assessment, and educational defense. Unauthorized testing against systems without permission is illegal.

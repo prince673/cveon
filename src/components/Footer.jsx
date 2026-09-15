@@ -10,7 +10,7 @@ const DATA_SOURCES = ['NVD', 'CIRCL', 'FIRST EPSS', 'CISA KEV']
 
 export default function Footer() {
   return (
-    <footer className="border-t border-white/[0.05] mt-16 py-8 px-4"
+    <footer className="relative border-t border-white/[0.05] mt-16 py-8 px-4"
             style={{ background: 'rgba(7,9,14,0.8)' }}>
       {/* Top accent line */}
       <div className="absolute inset-x-0 h-px bg-gradient-to-r from-transparent via-white/[0.07] to-transparent" />
@@ -45,7 +45,7 @@ export default function Footer() {
           For authorized security research and education only. Unauthorized testing is illegal.
         </p>
         <p className="text-center text-[10px] text-gray-800">
-          © {new Date().getFullYear()} CVE Explorer v4.0
+          © {new Date().getFullYear()} CVEon v4.0
         </p>
       </div>
     </footer>

@@ -11,12 +11,12 @@ const RULES = [
 ]
 
 export default function DisclaimerModal({ onAgree }) {
-  const [visible, setVisible] = useState(() => !sessionStorage.getItem(AGREED_KEY))
+  const [visible, setVisible] = useState(() => !localStorage.getItem(AGREED_KEY))
   const [checked, setChecked] = useState(false)
 
   function handleAgree() {
     if (!checked) return
-    sessionStorage.setItem(AGREED_KEY, '1')
+    localStorage.setItem(AGREED_KEY, '1')
     setVisible(false)
     onAgree?.()
   }
@@ -115,7 +115,7 @@ export default function DisclaimerModal({ onAgree }) {
           disabled={!checked}
           className="btn-primary w-full"
         >
-          Proceed to CVE Explorer
+          Proceed to CVEon
         </button>
       </div>
     </div>

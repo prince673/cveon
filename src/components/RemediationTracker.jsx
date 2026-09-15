@@ -42,15 +42,19 @@ export default function RemediationTracker({ cveId }) {
   }, [cveId, tick])
 
   async function handleCreate() {
-    await createRemediation({
-      cve_id: cveId,
-      assigned_to: form.assignedTo,
-      priority: form.priority,
-      notes: form.notes,
-    })
-    setShowForm(false)
-    setForm({ assignedTo: '', priority: 'p3_medium', notes: '' })
-    bump()
+    try {
+      await createRemediation({
+        cve_id: cveId,
+        assigned_to: form.assignedTo,
+        priority: form.priority,
+        notes: form.notes,
+      })
+      setShowForm(false)
+      setForm({ assignedTo: '', priority: 'p3_medium', notes: '' })
+      bump()
+    } catch (err) {
+      console.error('Failed to create remediation record:', err)
+    }
   }
 
   async function handleAdvance(id) {
@@ -58,8 +62,12 @@ export default function RemediationTracker({ cveId }) {
     if (!rec) return
     const nextStatus = STATUSES[STATUSES.indexOf(rec.status) + 1]
     if (nextStatus) {
-      await updateRemediation(id, { status: nextStatus })
-      bump()
+      try {
+        await updateRemediation(id, { status: nextStatus })
+        bump()
+      } catch (err) {
+        console.error('Failed to advance remediation status:', err)
+      }
     }
   }
 

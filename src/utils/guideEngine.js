@@ -50,7 +50,7 @@ const KEYWORD_MAP = [
   [/sql\s*inject|sqli\b|UNION\s+SELECT|blind\s*inject/i, 'sqli'],
   [/cross.site\s*script|xss\b|innerHTML|document\.cookie/i, 'xss'],
   [/command\s*inject|os\s*command|shell\s*inject/i, 'cmdinj'],
-  [/path\s*travers|directory\s*travers|\.\.\/|\.\\.\\/i, 'traversal'],
+  [/path\s*travers|directory\s*travers|\.\.\//i, 'traversal'],
   [/file\s*inclus|php:\/\/|include\s*\(.*\$/i, 'lfi'],
   [/deserializ|unserializ|pickle|marshal/i, 'deser'],
   [/server.side\s*request\s*forg|ssrf\b|169\.254\.169\.254/i, 'ssrf'],

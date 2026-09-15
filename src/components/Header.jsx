@@ -1,10 +1,9 @@
 import { ShieldIcon, SearchIcon, ChartIcon, ListIcon, CompareIcon } from './icons'
 
 const NAV = [
-  { key: 'home',      view: 'home',      label: 'Search',   icon: SearchIcon },
-  { key: 'batch',     view: 'batch',     label: 'Batch',    icon: ListIcon },
-  { key: 'compare',   view: 'compare',   label: 'Compare',  icon: CompareIcon },
-  { key: 'analytics', view: 'analytics', label: 'Analytics',icon: ChartIcon },
+  { key: 'home',    view: 'home',    label: 'Search',  icon: SearchIcon },
+  { key: 'batch',   view: 'batch',   label: 'Batch',   icon: ListIcon },
+  { key: 'compare', view: 'compare', label: 'Compare', icon: CompareIcon },
 ]
 
 export default function Header({ view, onNavigate }) {
@@ -19,7 +18,7 @@ export default function Header({ view, onNavigate }) {
         <button
           onClick={() => onNavigate?.('home')}
           className="flex items-center gap-3 select-none group"
-          aria-label="CVE Explorer home"
+          aria-label="CVEon home"
         >
           <span className="relative flex items-center justify-center w-8 h-8 rounded-xl
                            bg-gradient-to-br from-accent-cyan/20 to-accent-purple/20
@@ -31,7 +30,7 @@ export default function Header({ view, onNavigate }) {
                              group-hover:opacity-100 transition-opacity duration-300" />
           </span>
           <span className="font-bold text-[15px] tracking-tight text-gray-100">
-            CVE<span className="gradient-text">&nbsp;Explorer</span>
+            CVE<span className="gradient-text">on</span>
           </span>
           <span className="hidden sm:inline text-[9px] font-mono
                            text-gray-600 border border-dark-border rounded-md px-1.5 py-0.5

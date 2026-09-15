@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
-    APP_NAME: str = "CVE Explorer"
+    APP_NAME: str = "CVEon"
     APP_VERSION: str = "4.0.0"
     # development | production
     APP_ENV: str = "development"

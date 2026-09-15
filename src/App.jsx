@@ -9,8 +9,6 @@ import GuideTypesPanel      from './components/GuideTypesPanel'
 import Footer               from './components/Footer'
 import RiskScoreCard        from './components/RiskScoreCard'
 import ExploitabilityCard   from './components/ExploitabilityCard'
-import RemediationTracker   from './components/RemediationTracker'
-import AnalyticsDashboard   from './components/AnalyticsDashboard'
 import BatchView            from './components/BatchView'
 import CompareView          from './components/CompareView'
 import { lookupCVE }        from './services/api'
@@ -19,10 +17,10 @@ import { buildGuide }       from './utils/guideEngine'
 const VIEWS = {
   HOME: 'home',
   RESULTS: 'results',
-  ANALYTICS: 'analytics',
   BATCH: 'batch',
   COMPARE: 'compare',
 }
+
 
 export default function App() {
   const [view, setView] = useState(VIEWS.HOME)
@@ -157,8 +155,6 @@ export default function App() {
 
                 {guide && <ExploitationGuide guide={guide} />}
 
-                <RemediationTracker cveId={cveData.cve_id} />
-
                 <button
                   onClick={handleReset}
                   className="btn-ghost mt-6 mb-2"
@@ -173,8 +169,6 @@ export default function App() {
         {view === VIEWS.BATCH && <BatchView onSelect={handleSearch} />}
 
         {view === VIEWS.COMPARE && <CompareView onReset={handleReset} />}
-
-        {view === VIEWS.ANALYTICS && <AnalyticsDashboard />}
       </main>
 
       <Footer />

@@ -22,14 +22,15 @@ export default function InputForm({ onSubmit, loading }) {
 
   // Cycle through example placeholders
   useEffect(() => {
+    let fadeTimeout
     cycleRef.current = setInterval(() => {
       setPlaceholderVisible(false)
-      setTimeout(() => {
+      fadeTimeout = setTimeout(() => {
         setPlaceholderIdx(i => (i + 1) % EXAMPLES.length)
         setPlaceholderVisible(true)
       }, 300)
     }, 2800)
-    return () => clearInterval(cycleRef.current)
+    return () => { clearInterval(cycleRef.current); clearTimeout(fadeTimeout) }
   }, [])
 
   function handleSubmit(e) {
