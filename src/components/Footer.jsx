@@ -6,8 +6,6 @@ const LINKS = [
   { label: 'CISA KEV',  href: 'https://www.cisa.gov/known-exploited-vulnerabilities-catalog' },
 ]
 
-const DATA_SOURCES = ['NVD', 'CIRCL', 'FIRST EPSS', 'CISA KEV']
-
 export default function Footer() {
   return (
     <footer className="relative border-t border-white/[0.05] mt-16 py-8 px-4"
@@ -17,12 +15,11 @@ export default function Footer() {
 
       <div className="max-w-4xl mx-auto">
 
-        {/* Data source pills */}
-        <div className="flex flex-wrap items-center justify-center gap-2 mb-6">
-          <span className="text-[11px] text-gray-700 mr-1">Powered by</span>
-          {DATA_SOURCES.map(s => (
-            <span key={s} className="source-pill">{s}</span>
-          ))}
+        {/* Powered by line */}
+        <div className="flex items-center justify-center gap-2 mb-6">
+          <span className="text-xs text-gray-500">
+            Powered by <span className="font-semibold text-gray-300">CVEon</span>
+          </span>
         </div>
 
         {/* Nav links */}

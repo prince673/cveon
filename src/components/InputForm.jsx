@@ -80,7 +80,7 @@ export default function InputForm({ onSubmit, loading }) {
         </h1>
         <p className="text-[15px] text-gray-500 leading-relaxed max-w-xl mb-8">
           Technical details, explainable risk scoring & authorized-use exploitation guides
-          — powered by NVD, CIRCL, EPSS and CISA KEV.
+          — powered by CVEon.
         </p>
 
         {/* Search form */}
