@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  frontend:
+    name: Frontend (lint, test, build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  backend:
+    name: Backend (compile, import)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: cve_explorer
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        working-directory: backend
+        run: pip install -q -r requirements.txt
+      - name: Compile
+        working-directory: backend
+        run: python -m compileall -q app
+      - name: Verify app imports and routes
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/cve_explorer
+          APP_ENV: production
+          DEBUG: "false"
+        run: |
+          python - <<'EOF'
+          import asyncio
+          from app.database import engine
+          from app.main import app
+          assert app.version == "4.0.0"
+          async def check():
+              async with engine.connect() as conn:
+                  from sqlalchemy import text
+                  await conn.execute(text("SELECT 1"))
+              await engine.dispose()
+          asyncio.run(check())
+          print("backend OK")
+          EOF

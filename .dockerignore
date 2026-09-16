@@ -1,0 +1,15 @@
+node_modules
+dist
+npm-debug.log*
+*.local
+.DS_Store
+test
+.git
+.gitignore
+
+# Exclude backend from frontend build context (saves ~100MB+ per build)
+backend/
+docker-compose*.yml
+.env*
+!.env.example
+README.md
