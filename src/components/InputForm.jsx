@@ -11,7 +11,6 @@ const EXAMPLES = [
   'CVE-2022-22965', // Spring4Shell
 ]
 
-const SOURCE_PILLS = ['NVD', 'CIRCL', 'EPSS', 'CISA KEV', 'MITRE']
 
 export default function InputForm({ onSubmit, loading }) {
   const [value, setValue] = useState('')
@@ -65,11 +64,6 @@ export default function InputForm({ onSubmit, loading }) {
             <span className="w-1.5 h-1.5 rounded-full bg-accent-cyan animate-pulse" />
             Vulnerability Intelligence
           </span>
-          <div className="hidden sm:flex items-center gap-1.5 flex-wrap">
-            {SOURCE_PILLS.map(s => (
-              <span key={s} className="source-pill">{s}</span>
-            ))}
-          </div>
         </div>
 
         {/* Headline */}
