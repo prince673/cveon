@@ -1,8 +1,8 @@
 const STEPS = [
-  { label: 'NVD',      color: '#5b8def' },
-  { label: 'CIRCL',    color: '#7b83d4' },
-  { label: 'EPSS',     color: '#e879a0' },
-  { label: 'CISA KEV', color: '#d9a03f' },
+  { label: 'NVD',      color: '#22d3ee' },
+  { label: 'CIRCL',    color: '#a78bfa' },
+  { label: 'EPSS',     color: '#f472b6' },
+  { label: 'CISA KEV', color: '#fbbf24' },
 ]
 
 export default function LoadingSpinner({ message = 'Fetching vulnerability intelligence…' }) {
@@ -15,24 +15,24 @@ export default function LoadingSpinner({ message = 'Fetching vulnerability intel
         <div className="absolute inset-0 rounded-full border-2 border-white/[0.06]" />
         <div className="absolute inset-0 rounded-full border-2 border-t-accent-cyan border-r-transparent
                         border-b-transparent border-l-transparent animate-spin-slow"
-             style={{ filter: 'drop-shadow(0 0 8px rgba(91,141,239,0.7))' }} />
+             style={{ filter: 'drop-shadow(0 0 8px rgba(34,211,238,0.7))' }} />
 
         {/* Middle ring */}
         <div className="absolute inset-[6px] rounded-full border-2 border-white/[0.04]" />
         <div className="absolute inset-[6px] rounded-full border-2 border-b-accent-purple border-t-transparent
                         border-l-transparent border-r-transparent animate-spin-med"
-             style={{ filter: 'drop-shadow(0 0 6px rgba(123,131,212,0.6))' }} />
+             style={{ filter: 'drop-shadow(0 0 6px rgba(167,139,250,0.6))' }} />
 
         {/* Inner ring */}
         <div className="absolute inset-[12px] rounded-full border-[1.5px] border-white/[0.04]" />
         <div className="absolute inset-[12px] rounded-full border-[1.5px] border-t-transparent
                         border-r-accent-pink border-b-transparent border-l-transparent animate-spin-fast"
-             style={{ filter: 'drop-shadow(0 0 4px rgba(232,121,160,0.6))' }} />
+             style={{ filter: 'drop-shadow(0 0 4px rgba(244,114,182,0.6))' }} />
 
         {/* Center dot */}
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="w-2 h-2 rounded-full bg-accent-cyan animate-pulse"
-               style={{ boxShadow: '0 0 8px 2px rgba(91,141,239,0.6)' }} />
+               style={{ boxShadow: '0 0 8px 2px rgba(34,211,238,0.6)' }} />
         </div>
       </div>
 

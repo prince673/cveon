@@ -1,8 +1,78 @@
 import { calculateRiskAssessment } from '../utils/riskEngine'
 
-// In-memory cache for CISA KEV catalog to avoid refetching on every search
+// In-memory cache for CISA KEV catalog to avoid refetching on every search.
+// Volatile by design: it lives only in RAM for the current page load — nothing
+// is written to storage, so the app keeps a zero-footprint profile.
 let kevCatalogCache = null
 let kevFetchPromise = null
+
+// The app talks to public feeds directly from the visitor's browser (no proxy,
+// no API keys — that is what keeps lookups anonymous). Anonymous rate limits
+// therefore apply, so every upstream request retries throttling/5xx responses
+// with exponential backoff, honouring Retry-After when provided.
+const RETRYABLE_STATUSES = new Set([403, 429, 500, 502, 503, 504])
+const MAX_ATTEMPTS = 3
+const BACKOFF_BASE_MS = 1000
+const BACKOFF_CAP_MS = 8000
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+function getRetryDelayMs(attempt, retryAfterHeader) {
+  const retryAfter = parseFloat(retryAfterHeader)
+  if (Number.isFinite(retryAfter)) {
+    return Math.min(retryAfter * 1000, BACKOFF_CAP_MS)
+  }
+  return Math.min(BACKOFF_BASE_MS * 2 ** attempt, BACKOFF_CAP_MS)
+}
+
+async function fetchWithRetry(url, options = {}) {
+  let lastResp = null
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    try {
+      lastResp = await fetch(url, options)
+    } catch (err) {
+      if (attempt === MAX_ATTEMPTS - 1) throw err
+      await sleep(Math.min(BACKOFF_BASE_MS * 2 ** attempt, BACKOFF_CAP_MS))
+      continue
+    }
+    if (!RETRYABLE_STATUSES.has(lastResp.status)) return lastResp
+    if (attempt < MAX_ATTEMPTS - 1) {
+      await sleep(getRetryDelayMs(attempt, lastResp.headers.get('Retry-After')))
+    }
+  }
+  return lastResp
+}
+
+// Batch lookups must pace themselves: NVD allows only a handful of anonymous
+// requests per 30s window and GitHub allows 60/h per IP. A bounded in-browser
+// pool (plus the retries above) keeps large batches from burning quota.
+const BATCH_CONCURRENCY = 4
+
+/**
+ * Map items to results with at most `limit` workers running at once.
+ * Mirrors Promise.allSettled semantics: never rejects; preserves input order.
+ */
+export async function runWithConcurrency(items, limit, worker) {
+  const results = new Array(items.length)
+  let cursor = 0
+
+  async function lane() {
+    while (cursor < items.length) {
+      const index = cursor++
+      try {
+        results[index] = { status: 'fulfilled', value: await worker(items[index], index) }
+      } catch (error) {
+        results[index] = { status: 'rejected', reason: error }
+      }
+    }
+  }
+
+  const lanes = Math.min(Math.max(1, limit), Math.max(items.length, 1))
+  await Promise.all(Array.from({ length: lanes }, lane))
+  return results
+}
 
 function getSeverityFromCvss(score) {
   if (score === null || score === undefined) return 'Unknown'
@@ -19,6 +89,16 @@ function parseDate(dateStr) {
   return isNaN(d.getTime()) ? null : d.toISOString()
 }
 
+// The cisa.gov download endpoint sends no Access-Control-Allow-Origin header, so a
+// pure client-side app (no proxy) cannot read its responses — the browser blocks
+// the body. CISA's own GitHub mirror (cisagov/kev-data) serves the identical
+// catalog through raw.githubusercontent.com, which allows anonymous cross-origin
+// access; cisa.gov stays as an offline-server fallback attempt.
+const KEV_URLS = [
+  'https://raw.githubusercontent.com/cisagov/kev-data/main/known_exploited_vulnerabilities.json',
+  'https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json',
+]
+
 /**
  * Fetch CISA KEV catalog once and cache in memory.
  */
@@ -27,34 +107,38 @@ async function fetchKevCatalog() {
   if (kevFetchPromise) return kevFetchPromise
 
   kevFetchPromise = (async () => {
-    try {
-      const resp = await fetch('https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json', {
-        headers: { Accept: 'application/json' },
-      })
-      if (!resp.ok) return {}
-      const data = await resp.json()
-      const map = {}
-      for (const item of data.vulnerabilities || []) {
-        if (item.cveID) {
-          map[item.cveID.toUpperCase()] = {
-            vendor: item.vendorProject,
-            product: item.product,
-            vulnerability_name: item.vulnerabilityName,
-            date_added: item.dateAdded,
-            due_date: item.dueDate,
-            required_action: item.requiredAction,
-            known_ransomware_campaign_use: item.knownRansomwareCampaignUse === 'Known',
-            short_description: item.shortDescription,
+    for (const url of KEV_URLS) {
+      try {
+        const resp = await fetchWithRetry(url, {
+          headers: { Accept: 'application/json' },
+        })
+        if (!resp.ok) continue
+        const data = await resp.json()
+        if (!Array.isArray(data.vulnerabilities)) continue
+        const map = {}
+        for (const item of data.vulnerabilities) {
+          if (item.cveID) {
+            map[item.cveID.toUpperCase()] = {
+              vendor: item.vendorProject,
+              product: item.product,
+              vulnerability_name: item.vulnerabilityName,
+              date_added: item.dateAdded,
+              due_date: item.dueDate,
+              required_action: item.requiredAction,
+              known_ransomware_campaign_use: item.knownRansomwareCampaignUse === 'Known',
+              short_description: item.shortDescription,
+            }
           }
         }
+        kevCatalogCache = map
+        return map
+      } catch {
+        // Mirror down or throttled — try the next source
       }
-      kevCatalogCache = map
-      return map
-    } catch {
-      return {}
-    } finally {
-      kevFetchPromise = null
     }
+    // Nothing worked: clear the memoPromise so later lookups can retry
+    kevFetchPromise = null
+    return {}
   })()
 
   return kevFetchPromise
@@ -65,7 +149,7 @@ async function fetchKevCatalog() {
  */
 async function fetchEpss(cveId) {
   try {
-    const resp = await fetch(`https://api.first.org/data/v1/epss?cve=${encodeURIComponent(cveId)}`, {
+    const resp = await fetchWithRetry(`https://api.first.org/data/v1/epss?cve=${encodeURIComponent(cveId)}`, {
       headers: { Accept: 'application/json' },
     })
     if (!resp.ok) return null
@@ -90,7 +174,7 @@ async function fetchEpss(cveId) {
  */
 async function fetchExploits(cveId) {
   try {
-    const resp = await fetch(
+    const resp = await fetchWithRetry(
       `https://api.github.com/search/repositories?q=${encodeURIComponent(cveId + ' exploit')}&sort=stars&per_page=5`,
       { headers: { Accept: 'application/vnd.github.v3+json' } }
     )
@@ -113,7 +197,7 @@ async function fetchExploits(cveId) {
 async function fetchCveRaw(cveId) {
   // Try NIST NVD v2.0 first
   try {
-    const nvdResp = await fetch(
+    const nvdResp = await fetchWithRetry(
       `https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=${encodeURIComponent(cveId)}`,
       { headers: { Accept: 'application/json' } }
     )
@@ -130,7 +214,7 @@ async function fetchCveRaw(cveId) {
 
   // Fallback to CIRCL
   try {
-    const circlResp = await fetch(`https://cve.circl.lu/api/cve/${encodeURIComponent(cveId)}`)
+    const circlResp = await fetchWithRetry(`https://cve.circl.lu/api/cve/${encodeURIComponent(cveId)}`)
     if (circlResp.ok) {
       const data = await circlResp.json()
       if (data && (data.id || data.summary)) {
@@ -359,11 +443,12 @@ function formatSummary(cveData, risk) {
 }
 
 /**
- * Batch lookup for multiple CVEs concurrently in the browser.
+ * Batch lookup for multiple CVEs, paced by BATCH_CONCURRENCY so we do not
+ * blow through anonymous upstream rate limits (see runWithConcurrency).
  */
 export async function batchLookup(cveIds) {
   const uniqueIds = [...new Set(cveIds.map(s => s.trim().toUpperCase()).filter(Boolean))]
-  const settled = await Promise.allSettled(uniqueIds.map(id => lookupCVE(id)))
+  const settled = await runWithConcurrency(uniqueIds, BATCH_CONCURRENCY, lookupCVE)
 
   const results = []
   const errors = []
@@ -389,36 +474,4 @@ export async function compareCVEs(cveIds) {
     throw new Error('None of the requested CVEs could be found.')
   }
   return resp
-}
-
-// Session-only local storage fallbacks (zero server footprint, no backend collection)
-export async function getRemediationForCVE() {
-  return []
-}
-export async function createRemediation() {
-  return {}
-}
-export async function updateRemediation() {
-  return {}
-}
-export async function listAlerts() {
-  return []
-}
-export async function getUnreadAlertCount() {
-  return 0
-}
-export async function markAlertRead() {
-  return {}
-}
-export async function markAllAlertsRead() {
-  return {}
-}
-export async function acknowledgeAlert() {
-  return {}
-}
-export async function getDashboardAnalytics() {
-  return { scanned_count: 0, critical_count: 0 }
-}
-export async function healthCheck() {
-  return { status: 'ok', mode: 'client-only' }
 }

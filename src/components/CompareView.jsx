@@ -190,7 +190,7 @@ export default function CompareView({ onReset }) {
                 <div className="grid grid-cols-[150px_repeat(3,minmax(120px,1fr))] gap-3 items-center">
                   <span className="text-xs text-gray-500">Risk score</span>
                   {rows.map(r => {
-                    const c = { P1: '#e5484d', P2: '#f76808', P3: '#e7a008', P4: '#30a46c' }[r.risk?.priority] || '#8b5cf6'
+                    const c = { P1: '#f43f5e', P2: '#fb923c', P3: '#facc15', P4: '#34d399' }[r.risk?.priority] || '#a78bfa'
                     return <Meter key={r.cve_id} value={r.risk?.score || 0} max={maxRisk} color={c} />
                   })}
                 </div>
@@ -207,7 +207,7 @@ export default function CompareView({ onReset }) {
                   <span className="text-xs text-gray-500">EPSS</span>
                   {rows.map(r => (
                     <Meter key={r.cve_id} value={r.epss?.score ? Math.round(r.epss.score * 100) : 0}
-                           max={Math.round(maxEpss * 100)} color="#8b5cf6" />
+                           max={Math.round(maxEpss * 100)} color="#a78bfa" />
                   ))}
                 </div>
 

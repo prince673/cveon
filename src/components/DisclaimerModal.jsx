@@ -11,12 +11,15 @@ const RULES = [
 ]
 
 export default function DisclaimerModal({ onAgree }) {
-  const [visible, setVisible] = useState(() => !localStorage.getItem(AGREED_KEY))
+  // sessionStorage keeps the acknowledgement alive for the current tab only.
+  // Closing the tab erases it — the app never persists anything between
+  // sessions, keeping the zero-footprint guarantee.
+  const [visible, setVisible] = useState(() => !sessionStorage.getItem(AGREED_KEY))
   const [checked, setChecked] = useState(false)
 
   function handleAgree() {
     if (!checked) return
-    localStorage.setItem(AGREED_KEY, '1')
+    sessionStorage.setItem(AGREED_KEY, '1')
     setVisible(false)
     onAgree?.()
   }
@@ -29,10 +32,10 @@ export default function DisclaimerModal({ onAgree }) {
 
       <div className="relative max-w-lg w-full animate-scale-in"
            style={{
-             background: 'rgba(17,21,32,0.92)',
-             border: '1px solid rgba(255,255,255,0.08)',
+             background: 'rgba(15, 13, 34, 0.86)',
+             border: '1px solid rgba(255,255,255,0.1)',
              borderRadius: '20px',
-             boxShadow: '0 0 0 1px rgba(255,255,255,0.04), 0 32px 80px -16px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.07)',
+             boxShadow: '0 0 0 1px rgba(129,140,248,0.08), 0 32px 80px -16px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.08)',
              padding: '36px',
            }}>
 
@@ -45,9 +48,9 @@ export default function DisclaimerModal({ onAgree }) {
           <span className="relative flex items-center justify-center w-12 h-12 rounded-2xl
                            text-amber-400 flex-shrink-0"
                 style={{
-                  background: 'rgba(217,160,63,0.1)',
-                  border: '1px solid rgba(217,160,63,0.25)',
-                  boxShadow: '0 0 20px -4px rgba(217,160,63,0.4)',
+                  background: 'rgba(251,191,36,0.1)',
+                  border: '1px solid rgba(251,191,36,0.25)',
+                  boxShadow: '0 0 20px -4px rgba(251,191,36,0.4)',
                 }}>
             <WarningIcon size={22} />
           </span>
@@ -70,10 +73,10 @@ export default function DisclaimerModal({ onAgree }) {
             <li key={i} className="flex items-start gap-3 text-sm text-gray-400">
               <span className="flex items-center justify-center w-5 h-5 rounded-full shrink-0 mt-0.5"
                     style={{
-                      background: 'rgba(91,141,239,0.12)',
-                      border: '1px solid rgba(91,141,239,0.25)',
+                      background: 'rgba(129,140,248,0.12)',
+                      border: '1px solid rgba(129,140,248,0.25)',
                     }}>
-                <CheckIcon size={10} className="text-accent-cyan" />
+                <CheckIcon size={10} className="text-accent-indigo" />
               </span>
               <span className="leading-snug">{item}</span>
             </li>
@@ -83,28 +86,34 @@ export default function DisclaimerModal({ onAgree }) {
         {/* Placeholder note */}
         <div className="mb-6 px-4 py-3 rounded-xl text-xs text-gray-500 leading-relaxed"
              style={{
-               background: 'rgba(217,160,63,0.06)',
-               borderLeft: '3px solid rgba(217,160,63,0.5)',
+               background: 'rgba(251,191,36,0.06)',
+               borderLeft: '3px solid rgba(251,191,36,0.5)',
              }}>
           All commands use{' '}
           <code className="text-amber-300 font-mono">[TARGET_URL]</code> and{' '}
           <code className="text-amber-300 font-mono">[ATTACKER_IP]</code> placeholders.
         </div>
 
-        {/* Checkbox */}
-        <label className="flex items-center gap-3 mb-5 cursor-pointer group">
+        {/* Checkbox — a native input stretched over the whole row keeps keyboard,
+            screen-reader and pointer users (the text is part of the toggle target);
+            it is invisible but not clipped, so it is genuinely clickable everywhere */}
+        <label className="relative flex items-center gap-3 mb-5 cursor-pointer group select-none">
+          <input
+            type="checkbox"
+            checked={checked}
+            onChange={e => setChecked(e.target.checked)}
+            className="peer opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+          />
           <div
-            onClick={() => setChecked(v => !v)}
-            className={`w-5 h-5 rounded-md border flex items-center justify-center
-                        transition-all duration-200 shrink-0 ${
-              checked
-                ? 'border-accent-cyan bg-accent-cyan/20'
-                : 'border-white/15 bg-white/[0.03] group-hover:border-white/25'
-            }`}
+            className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0
+                        border-white/15 bg-white/[0.03] group-hover:border-white/30
+                        peer-checked:border-accent-indigo peer-checked:bg-accent-indigo/20
+                        peer-focus-visible:border-accent-indigo
+                        transition-all duration-200`}
           >
-            {checked && <CheckIcon size={11} className="text-accent-cyan" />}
+            {checked && <CheckIcon size={11} className="text-accent-indigo" />}
           </div>
-          <span className="text-sm text-gray-400 select-none group-hover:text-gray-300 transition-colors">
+          <span className="text-sm text-gray-400 group-hover:text-gray-300 transition-colors">
             I understand and agree to use this tool responsibly
           </span>
         </label>

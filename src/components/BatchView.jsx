@@ -213,8 +213,8 @@ export default function BatchView({ onSelect }) {
                   onClick={() => setPrioFilter(p)}
                   className={`px-2.5 py-1 rounded-lg text-xs border transition-colors ${
                     prioFilter === p
-                      ? 'bg-accent-cyan/15 border-accent-cyan/40 text-accent-cyan'
-                      : 'border-dark-border text-gray-400 hover:text-gray-200'
+                      ? 'bg-accent-indigo/15 border-accent-indigo/40 text-accent-indigo'
+                      : 'border-white/[0.08] text-gray-400 hover:text-gray-200'
                   }`}
                 >
                   {p === 'ALL' ? 'All' : p}

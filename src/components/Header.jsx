@@ -10,7 +10,7 @@ export default function Header({ view, onNavigate }) {
   return (
     <header className="sticky top-0 z-40 glass border-b border-white/[0.06]">
       {/* Animated top accent line */}
-      <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-accent-cyan/50 to-transparent" />
+      <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-accent-indigo/60 to-transparent" />
 
       <div className="max-w-4xl mx-auto px-4 h-15 py-3 flex items-center justify-between gap-4">
 
@@ -21,12 +21,12 @@ export default function Header({ view, onNavigate }) {
           aria-label="CVEon home"
         >
           <span className="relative flex items-center justify-center w-8 h-8 rounded-xl
-                           bg-gradient-to-br from-accent-cyan/20 to-accent-purple/20
-                           border border-accent-cyan/25 text-accent-cyan
+                           bg-gradient-to-br from-accent-indigo/25 to-accent-purple/25
+                           border border-accent-indigo/30 text-accent-indigo
                            transition-all duration-300
-                           group-hover:shadow-glow-soft group-hover:border-accent-cyan/40">
+                           group-hover:shadow-glow-soft group-hover:border-accent-indigo/50">
             <ShieldIcon size={16} />
-            <span className="absolute inset-0 rounded-xl bg-accent-cyan/10 opacity-0
+            <span className="absolute inset-0 rounded-xl bg-accent-indigo/15 opacity-0
                              group-hover:opacity-100 transition-opacity duration-300" />
           </span>
           <span className="font-bold text-[15px] tracking-tight text-gray-100">
@@ -55,9 +55,9 @@ export default function Header({ view, onNavigate }) {
                     : 'text-gray-500 hover:text-gray-200'
                 }`}
                 style={active ? {
-                  background: 'rgba(91,141,239,0.12)',
-                  border: '1px solid rgba(91,141,239,0.2)',
-                  boxShadow: '0 0 12px -4px rgba(91,141,239,0.3)',
+                  background: 'linear-gradient(165deg, rgba(129,140,248,0.18), rgba(167,139,250,0.1))',
+                  border: '1px solid rgba(129,140,248,0.3)',
+                  boxShadow: '0 0 16px -4px rgba(129,140,248,0.4)',
                 } : {
                   background: 'rgba(255,255,255,0)',
                   border: '1px solid transparent',
@@ -67,8 +67,8 @@ export default function Header({ view, onNavigate }) {
                 <span className="hidden sm:inline">{item.label}</span>
                 {active && (
                   <span className="absolute -bottom-[1px] left-1/2 -translate-x-1/2
-                                   w-6 h-px rounded-full bg-accent-cyan
-                                   shadow-[0_0_8px_2px_rgba(91,141,239,0.6)]" />
+                                   w-6 h-px rounded-full bg-accent-indigo
+                                   shadow-[0_0_8px_2px_rgba(129,140,248,0.6)]" />
                 )}
               </button>
             )

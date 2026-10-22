@@ -8,6 +8,7 @@
  */
 
 import GUIDES from '../data/guideTemplates'
+import { GUIDE_TYPES } from '../data/guideTypes'
 import { getClassTechniques } from '../data/mitreData'
 
 const CWE_MAP = {
@@ -396,5 +397,8 @@ export function buildGuide(cveData) {
 }
 
 export function getAllGuideTypes() {
-  return Object.entries(GUIDES).map(([key, g]) => ({ key, name: g.name }))
+  // Served from the lightweight registry so UI panels never need the 95KB
+  // template catalog. Keep guideTypes.js in sync with guideTemplates.js —
+  // enforced by guideTypes.test.js.
+  return GUIDE_TYPES.map(({ key, name }) => ({ key, name }))
 }

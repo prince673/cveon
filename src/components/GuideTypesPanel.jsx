@@ -1,40 +1,21 @@
-import { getAllGuideTypes } from '../utils/guideEngine'
+import { GUIDE_TYPES } from '../data/guideTypes'
 import { LayersIcon } from './icons'
 
-const COLOR_MAP = {
-  sqli: { text: 'text-amber-400',  border: 'rgba(251,191,36,0.25)',  bg: 'rgba(251,191,36,0.06)',  dot: '#fbbf24' },
-  xss:  { text: 'text-pink-400',   border: 'rgba(244,114,182,0.25)', bg: 'rgba(244,114,182,0.06)', dot: '#f472b6' },
-  rce:  { text: 'text-red-400',    border: 'rgba(248,113,113,0.25)', bg: 'rgba(248,113,113,0.06)', dot: '#f87171' },
-  traversal: { text: 'text-orange-400', border: 'rgba(251,146,60,0.25)', bg: 'rgba(251,146,60,0.06)', dot: '#fb923c' },
-  lfi:  { text: 'text-orange-500', border: 'rgba(249,115,22,0.25)',  bg: 'rgba(249,115,22,0.06)',  dot: '#f97316' },
-  cmdinj: { text: 'text-red-500',  border: 'rgba(239,68,68,0.25)',   bg: 'rgba(239,68,68,0.06)',   dot: '#ef4444' },
-  deser: { text: 'text-purple-400',border: 'rgba(192,132,252,0.25)', bg: 'rgba(192,132,252,0.06)', dot: '#c084fc' },
-  ssrf: { text: 'text-cyan-400',   border: 'rgba(34,211,238,0.25)',  bg: 'rgba(34,211,238,0.06)',  dot: '#22d3ee' },
-  xxe:  { text: 'text-blue-400',   border: 'rgba(96,165,250,0.25)',  bg: 'rgba(96,165,250,0.06)',  dot: '#60a5fa' },
-  idor: { text: 'text-green-400',  border: 'rgba(74,222,128,0.25)',  bg: 'rgba(74,222,128,0.06)',  dot: '#4ade80' },
-  redirect: { text: 'text-yellow-400', border: 'rgba(250,204,21,0.25)', bg: 'rgba(250,204,21,0.06)', dot: '#facc15' },
-  ssti: { text: 'text-fuchsia-400',border: 'rgba(232,121,249,0.25)', bg: 'rgba(232,121,249,0.06)', dot: '#e879f9' },
-  jwt:  { text: 'text-indigo-400', border: 'rgba(129,140,248,0.25)', bg: 'rgba(129,140,248,0.06)', dot: '#818cf8' },
-  csrf: { text: 'text-teal-400',   border: 'rgba(45,212,191,0.25)',  bg: 'rgba(45,212,191,0.06)',  dot: '#2dd4bf' },
-  fileupload: { text: 'text-rose-400', border: 'rgba(251,113,133,0.25)', bg: 'rgba(251,113,133,0.06)', dot: '#fb7185' },
-  generic: { text: 'text-gray-400',border: 'rgba(156,163,175,0.15)', bg: 'rgba(156,163,175,0.04)', dot: '#9ca3af' },
-  nosqli: { text: 'text-lime-400', border: 'rgba(163,230,53,0.25)',  bg: 'rgba(163,230,53,0.06)',  dot: '#a3e635' },
-  ldapi:  { text: 'text-violet-400',border: 'rgba(167,139,250,0.25)',bg: 'rgba(167,139,250,0.06)', dot: '#a78bfa' },
-  xpath:  { text: 'text-blue-300', border: 'rgba(147,197,253,0.25)', bg: 'rgba(147,197,253,0.06)', dot: '#93c5fd' },
-  bufferoverflow: { text: 'text-red-500', border: 'rgba(239,68,68,0.25)', bg: 'rgba(239,68,68,0.06)', dot: '#ef4444' },
-  weakauth: { text: 'text-orange-300', border: 'rgba(253,186,116,0.25)', bg: 'rgba(253,186,116,0.06)', dot: '#fdba74' },
-  infodisc: { text: 'text-sky-400', border: 'rgba(56,189,248,0.25)', bg: 'rgba(56,189,248,0.06)',  dot: '#38bdf8' },
-  race:  { text: 'text-pink-400',   border: 'rgba(244,114,182,0.25)',bg: 'rgba(244,114,182,0.06)', dot: '#f472b6' },
-  crypto: { text: 'text-teal-300',  border: 'rgba(94,234,212,0.25)', bg: 'rgba(94,234,212,0.06)',  dot: '#5eead4' },
-  smuggling: { text: 'text-amber-400', border: 'rgba(251,191,36,0.25)', bg: 'rgba(251,191,36,0.06)', dot: '#fbbf24' },
-  prototype: { text: 'text-cyan-300', border: 'rgba(103,232,249,0.25)', bg: 'rgba(103,232,249,0.06)', dot: '#67e8f9' },
-  clickjacking: { text: 'text-rose-300', border: 'rgba(253,164,175,0.25)', bg: 'rgba(253,164,175,0.06)', dot: '#fda4af' },
-  oauth: { text: 'text-blue-400',   border: 'rgba(96,165,250,0.25)', bg: 'rgba(96,165,250,0.06)',  dot: '#60a5fa' },
-}
-const FALLBACK = { text: 'text-gray-400', border: 'rgba(156,163,175,0.15)', bg: 'rgba(156,163,175,0.04)', dot: '#9ca3af' }
+/* Branded palette rotation for guide chips — keeps coverage colorful but
+   on-theme instead of a full-spectrum rainbow. */
+const COLOR_CYCLE = [
+  { text: 'text-accent-indigo', border: 'rgba(129,140,248,0.28)', bg: 'rgba(129,140,248,0.07)', dot: '#818cf8' },
+  { text: 'text-accent-cyan',   border: 'rgba(34,211,238,0.28)',  bg: 'rgba(34,211,238,0.06)',  dot: '#22d3ee' },
+  { text: 'text-accent-purple', border: 'rgba(167,139,250,0.28)', bg: 'rgba(167,139,250,0.06)', dot: '#a78bfa' },
+  { text: 'text-accent-pink',   border: 'rgba(244,114,182,0.28)', bg: 'rgba(244,114,182,0.06)', dot: '#f472b6' },
+  { text: 'text-accent-amber',  border: 'rgba(251,191,36,0.28)',  bg: 'rgba(251,191,36,0.05)',  dot: '#fbbf24' },
+  { text: 'text-accent-purple', border: 'rgba(196,181,253,0.28)', bg: 'rgba(196,181,253,0.06)', dot: '#c4b5fd' },
+]
 
 export default function GuideTypesPanel() {
-  const types = getAllGuideTypes()
+  // The lightweight registry (see src/data/guideTypes.js) lets this home-page
+  // panel render coverage without pulling the full template catalog in.
+  const types = GUIDE_TYPES
 
   return (
     <section className="card mt-4">
@@ -54,8 +35,8 @@ export default function GuideTypesPanel() {
       </header>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-        {types.map(({ key, name }) => {
-          const c = COLOR_MAP[key] || FALLBACK
+        {types.map(({ key, name }, i) => {
+          const c = COLOR_CYCLE[i % COLOR_CYCLE.length]
           return (
             <div
               key={key}

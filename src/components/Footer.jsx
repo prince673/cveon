@@ -8,17 +8,20 @@ const LINKS = [
 
 export default function Footer() {
   return (
-    <footer className="relative border-t border-white/[0.05] mt-16 py-8 px-4"
-            style={{ background: 'rgba(7,9,14,0.8)' }}>
+    <footer className="relative border-t border-white/[0.06] mt-16 py-8 px-4 glass">
       {/* Top accent line */}
-      <div className="absolute inset-x-0 h-px bg-gradient-to-r from-transparent via-white/[0.07] to-transparent" />
+      <div className="absolute inset-x-0 h-px bg-gradient-to-r from-transparent via-accent-indigo/30 to-transparent" />
 
       <div className="max-w-4xl mx-auto">
 
-        {/* Powered by line */}
-        <div className="flex items-center justify-center gap-2 mb-6">
+        {/* Brand + privacy pill */}
+        <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
           <span className="text-xs text-gray-500">
             Powered by <span className="font-semibold text-gray-300">CVEon</span>
+          </span>
+          <span className="pill text-[10px] text-gray-500">
+            <span className="w-1.5 h-1.5 rounded-full bg-accent-cyan animate-pulse" />
+            Zero storage · Zero tracking · Zero footprint
           </span>
         </div>
 
@@ -30,7 +33,7 @@ export default function Footer() {
               href={link.href}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-gray-600 hover:text-gray-300 transition-colors duration-150"
+              className="text-xs text-gray-600 hover:text-accent-indigo transition-colors duration-150"
             >
               {link.label}
             </a>

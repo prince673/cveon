@@ -23,15 +23,12 @@ dist-ssr
 *.sln
 *.sw?
 
-# Environment / secrets (templates *.example are tracked)
+# Environment / secrets — never committed. The app itself is a static bundle
+# and stores nothing, but local deployment files should stay local.
 .env
 .env.*
-!.env.example
-backend/.env
-backend/.env.*
-!backend/.env.example
 
-# Backend
+# Python build artifacts (kept in case local tooling is used)
 **/__pycache__/
 *.pyc
 *.pyo
@@ -40,9 +37,6 @@ venv/
 
 # Docker
 docker-compose.override.yml
-
-# Backups
-*.sql.gz
 
 # Database
 *.db

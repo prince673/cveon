@@ -47,9 +47,9 @@ export default function InputForm({ onSubmit, loading }) {
     <section className="relative overflow-hidden rounded-2xl mb-6 animate-fade-up">
       {/* Layered ambient glow */}
       <div className="absolute -top-32 -right-20 w-96 h-96 rounded-full
-                      bg-accent-cyan/8 blur-3xl pointer-events-none" />
+                      bg-accent-indigo/10 blur-3xl pointer-events-none" />
       <div className="absolute -bottom-24 -left-16 w-72 h-72 rounded-full
-                      bg-accent-purple/8 blur-3xl pointer-events-none" />
+                      bg-accent-purple/10 blur-3xl pointer-events-none" />
 
       {/* Glass card */}
       <div className="relative card-flat px-8 pt-10 pb-8">
@@ -59,22 +59,30 @@ export default function InputForm({ onSubmit, loading }) {
 
         {/* Top badges */}
         <div className="flex flex-wrap items-center gap-2 mb-5">
-          <span className="tag bg-accent-cyan/10 text-accent-cyan border-accent-cyan/20
-                           shadow-[0_0_12px_-4px_rgba(91,141,239,0.4)]">
-            <span className="w-1.5 h-1.5 rounded-full bg-accent-cyan animate-pulse" />
+          <span className="tag bg-accent-indigo/10 text-accent-indigo border-accent-indigo/25
+                           shadow-[0_0_14px_-4px_rgba(129,140,248,0.5)]">
+            <span className="w-1.5 h-1.5 rounded-full bg-accent-indigo animate-pulse" />
             Vulnerability Intelligence
+          </span>
+          <span className="tag bg-accent-purple/10 text-accent-purple border-accent-purple/25">
+            <span className="w-1.5 h-1.5 rounded-full bg-accent-purple" />
+            No tracking · Nothing stored
+          </span>
+          <span className="hidden sm:inline-flex tag bg-accent-cyan/10 text-accent-cyan border-accent-cyan/25">
+            <span className="w-1.5 h-1.5 rounded-full bg-accent-cyan" />
+            100% client-side
           </span>
         </div>
 
         {/* Headline */}
-        <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-white leading-tight mb-2">
-          Look up any CVE{' '}
+        <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-white leading-[1.1] mb-3">
+          Decode any CVE{' '}
           <span className="gradient-text">in seconds</span>
           <span className="text-gray-600">.</span>
         </h1>
-        <p className="text-[15px] text-gray-500 leading-relaxed max-w-xl mb-8">
-          Technical details, explainable risk scoring & authorized-use exploitation guides
-          — powered by CVEon.
+        <p className="text-[15px] text-gray-400 leading-relaxed max-w-xl mb-8">
+          CVSS, EPSS, CISA KEV and public exploit intel — scored, explained and rendered
+          entirely in your browser. No accounts, no logs, no digital footprint.
         </p>
 
         {/* Search form */}
@@ -132,11 +140,11 @@ export default function InputForm({ onSubmit, loading }) {
               key={id}
               onClick={() => { setValue(id); setError('') }}
               className="text-xs font-mono transition-all duration-200
-                         text-gray-500 hover:text-accent-cyan
+                         text-gray-500 hover:text-accent-indigo
                          px-3 py-1.5 rounded-lg
-                         border border-white/[0.06] hover:border-accent-cyan/30
-                         bg-white/[0.02] hover:bg-accent-cyan/[0.06]
-                         hover:shadow-[0_0_12px_-4px_rgba(91,141,239,0.4)]"
+                         border border-white/[0.07] hover:border-accent-indigo/35
+                         bg-white/[0.02] hover:bg-accent-indigo/[0.08]
+                         hover:shadow-[0_0_14px_-4px_rgba(129,140,248,0.45)]"
             >
               {id}
             </button>

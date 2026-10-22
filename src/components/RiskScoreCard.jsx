@@ -1,15 +1,15 @@
 const PRIORITY_STYLES = {
-  P1: { text: 'text-red-400',    border: 'border-red-500/35',    ring: '#e5484d', glow: 'rgba(229,72,77,0.45)',   bg: 'rgba(229,72,77,0.08)'  },
-  P2: { text: 'text-orange-400', border: 'border-orange-500/35', ring: '#f76808', glow: 'rgba(247,104,8,0.45)',   bg: 'rgba(247,104,8,0.07)'  },
-  P3: { text: 'text-yellow-400', border: 'border-yellow-500/35', ring: '#e7a008', glow: 'rgba(231,160,8,0.4)',    bg: 'rgba(231,160,8,0.06)'  },
-  P4: { text: 'text-green-400',  border: 'border-green-500/35',  ring: '#30a46c', glow: 'rgba(48,164,108,0.4)',   bg: 'rgba(48,164,108,0.06)' },
+  P1: { text: 'text-red-400',    border: 'border-red-500/35',    ring: '#f43f5e', glow: 'rgba(244,63,94,0.5)',    bg: 'rgba(244,63,94,0.08)'  },
+  P2: { text: 'text-orange-400', border: 'border-orange-500/35', ring: '#fb923c', glow: 'rgba(251,146,60,0.5)',   bg: 'rgba(251,146,60,0.07)' },
+  P3: { text: 'text-yellow-400', border: 'border-yellow-500/35', ring: '#facc15', glow: 'rgba(250,204,21,0.45)',  bg: 'rgba(250,204,21,0.06)' },
+  P4: { text: 'text-green-400',  border: 'border-green-500/35',  ring: '#34d399', glow: 'rgba(52,211,153,0.45)',  bg: 'rgba(52,211,153,0.06)' },
 }
 
 function SignalBar({ signal }) {
   const pct = signal.max > 0 ? Math.min(100, (signal.value / signal.max) * 100) : 0
   const ratio = signal.max > 0 ? signal.value / signal.max : 0
-  const barColor = ratio >= 0.7 ? '#e5484d' : ratio >= 0.4 ? '#f76808' : ratio >= 0.2 ? '#e7a008' : '#30a46c'
-  const barGlow  = ratio >= 0.7 ? 'rgba(229,72,77,0.5)' : ratio >= 0.4 ? 'rgba(247,104,8,0.5)' : 'rgba(231,160,8,0.4)'
+  const barColor = ratio >= 0.7 ? '#f43f5e' : ratio >= 0.4 ? '#fb923c' : ratio >= 0.2 ? '#facc15' : '#34d399'
+  const barGlow  = ratio >= 0.7 ? 'rgba(244,63,94,0.55)' : ratio >= 0.4 ? 'rgba(251,146,60,0.55)' : 'rgba(250,204,21,0.45)'
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -134,9 +134,9 @@ export default function RiskScoreCard({ risk }) {
                                    'border-accent-cyan text-gray-300'
         }`}
         style={{
-          background: risk.priority === 'P1' ? 'rgba(229,72,77,0.07)' :
-                      risk.priority === 'P2' ? 'rgba(247,104,8,0.07)' :
-                                               'rgba(91,141,239,0.06)',
+          background: risk.priority === 'P1' ? 'rgba(244,63,94,0.07)' :
+                      risk.priority === 'P2' ? 'rgba(251,146,60,0.07)' :
+                                               'rgba(129,140,248,0.08)',
         }}>
           <span className="font-semibold text-gray-100">Recommendation: </span>
           {risk.recommendation}

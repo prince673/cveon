@@ -5,11 +5,8 @@ npm-debug.log*
 .DS_Store
 test
 .git
+.github
 .gitignore
-
-# Exclude backend from frontend build context (saves ~100MB+ per build)
-backend/
 docker-compose*.yml
 .env*
-!.env.example
 README.md

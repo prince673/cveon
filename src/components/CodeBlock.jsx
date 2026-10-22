@@ -6,22 +6,22 @@ import python from 'react-syntax-highlighter/dist/esm/languages/prism/python'
 SyntaxHighlighter.registerLanguage('bash', bash)
 SyntaxHighlighter.registerLanguage('python', python)
 
-// Minimal prism theme that matches our dark palette
+// Syntax theme that matches the glass/aurora palette
 const darkTheme = {
   'code[class*="language-"]': {
-    color: '#7dd3fc',
-    fontFamily: '"JetBrains Mono", monospace',
+    color: '#a5b4fc',
+    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
     fontSize: '0.8rem',
     lineHeight: '1.6',
     whiteSpace: 'pre',
   },
-  'token.comment':    { color: '#64748b', fontStyle: 'italic' },
-  'token.keyword':    { color: '#c084fc' },
-  'token.string':     { color: '#86efac' },
+  'token.comment':    { color: '#6b7a99', fontStyle: 'italic' },
+  'token.keyword':    { color: '#c4b5fd' },
+  'token.string':     { color: '#7ee7c7' },
   'token.number':     { color: '#fb923c' },
-  'token.operator':   { color: '#f59e0b' },
-  'token.function':   { color: '#60a5fa' },
-  'token.punctuation':{ color: '#94a3b8' },
+  'token.operator':   { color: '#f0abfc' },
+  'token.function':   { color: '#67e8f9' },
+  'token.punctuation':{ color: '#8b93b8' },
 }
 
 function detectLang(code) {
@@ -45,14 +45,15 @@ export default function CodeBlock({ code }) {
   const lang = detectLang(code)
 
   return (
-    <div className="relative mt-2 rounded-lg border border-dark-border overflow-hidden group">
+    <div className="relative mt-2 rounded-lg border border-white/[0.09] overflow-hidden group">
       <SyntaxHighlighter
         language={lang}
         style={darkTheme}
         customStyle={{
           margin: 0,
           padding: '0.75rem 1rem',
-          background: '#0a0d14',
+          background: 'rgba(9, 8, 24, 0.75)',
+          backdropFilter: 'blur(10px)',
           borderRadius: 0,
         }}
         wrapLongLines={false}
