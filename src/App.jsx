@@ -4,7 +4,6 @@ import Header               from './components/Header'
 import InputForm            from './components/InputForm'
 import LoadingSpinner       from './components/LoadingSpinner'
 import VulnerabilityCard    from './components/VulnerabilityCard'
-import GuideTypesPanel      from './components/GuideTypesPanel'
 import Footer               from './components/Footer'
 import RiskScoreCard        from './components/RiskScoreCard'
 import ExploitabilityCard   from './components/ExploitabilityCard'
@@ -182,10 +181,7 @@ export default function App() {
 
         <Suspense fallback={<LoadingSpinner message="Loading…" />}>
           {view === VIEWS.HOME && (
-            <>
-              <InputForm onSubmit={handleSearch} loading={loading} />
-              <GuideTypesPanel />
-            </>
+            <InputForm onSubmit={handleSearch} loading={loading} />
           )}
 
           {view === VIEWS.RESULTS && (
