@@ -166,14 +166,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen text-gray-200 flex flex-col">
-      {/* Ambient aurora field — pure CSS, no trackers, no images */}
-      <div aria-hidden="true" className="aurora">
-        <div className="orb orb-indigo w-[560px] h-[560px] -top-48 -right-44" />
-        <div className="orb orb-violet w-[440px] h-[440px] top-[36%] -left-56" />
-        <div className="orb orb-cyan w-[380px] h-[380px] bottom-[-160px] right-[16%]" />
-        <div className="orb orb-pink w-[300px] h-[300px] top-[70%] left-[38%]" />
-      </div>
-
       <DisclaimerModal />
       <Header view={view} onNavigate={handleNavigate} />
 

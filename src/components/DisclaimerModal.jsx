@@ -28,40 +28,35 @@ export default function DisclaimerModal({ onAgree }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-         style={{ background: 'rgba(0,0,0,0.88)', backdropFilter: 'blur(20px)' }}>
+         style={{ background: 'rgba(0,0,0,0.85)' }}>
 
       <div className="relative max-w-lg w-full animate-scale-in"
            style={{
-             background: 'rgba(15, 13, 34, 0.86)',
-             border: '1px solid rgba(255,255,255,0.1)',
-             borderRadius: '20px',
-             boxShadow: '0 0 0 1px rgba(129,140,248,0.08), 0 32px 80px -16px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.08)',
-             padding: '36px',
+             background: '#161b22',
+             border: '1px solid #30363d',
+             borderRadius: '8px',
+             boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+             padding: '32px',
            }}>
-
-        {/* Top inner highlight */}
-        <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r
-                        from-transparent via-white/15 to-transparent" />
 
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">
-          <span className="relative flex items-center justify-center w-12 h-12 rounded-2xl
-                           text-amber-400 flex-shrink-0"
+          <span className="flex items-center justify-center w-11 h-11 rounded-md
+                           text-[#d29922] shrink-0"
                 style={{
-                  background: 'rgba(251,191,36,0.1)',
-                  border: '1px solid rgba(251,191,36,0.25)',
-                  boxShadow: '0 0 20px -4px rgba(251,191,36,0.4)',
+                  background: 'rgba(210,153,34,0.1)',
+                  border: '1px solid rgba(210,153,34,0.3)',
                 }}>
-            <WarningIcon size={22} />
+            <WarningIcon size={20} />
           </span>
           <div>
-            <h2 className="text-lg font-bold text-white leading-none mb-1">Educational Use Only</h2>
-            <p className="text-[12px] text-gray-600">Please read before proceeding</p>
+            <h2 className="text-base font-bold text-gray-100 leading-none mb-1">Educational use only</h2>
+            <p className="text-[12px] text-[#6e7681]">Please read before proceeding</p>
           </div>
         </div>
 
         {/* Description */}
-        <p className="text-sm text-gray-400 mb-5 leading-relaxed">
+        <p className="text-sm text-[#8b949e] mb-5 leading-relaxed">
           This tool is intended <strong className="text-gray-200">solely</strong> for authorized
           security research and education. All exploitation guides are for{' '}
           <strong className="text-gray-200">demonstration purposes only</strong>.
@@ -70,13 +65,13 @@ export default function DisclaimerModal({ onAgree }) {
         {/* Rules */}
         <ul className="space-y-3 mb-5">
           {RULES.map((item, i) => (
-            <li key={i} className="flex items-start gap-3 text-sm text-gray-400">
-              <span className="flex items-center justify-center w-5 h-5 rounded-full shrink-0 mt-0.5"
+            <li key={i} className="flex items-start gap-3 text-sm text-[#8b949e]">
+              <span className="flex items-center justify-center w-5 h-5 rounded shrink-0 mt-0.5"
                     style={{
-                      background: 'rgba(129,140,248,0.12)',
-                      border: '1px solid rgba(129,140,248,0.25)',
+                      background: '#21262d',
+                      border: '1px solid #30363d',
                     }}>
-                <CheckIcon size={10} className="text-accent-indigo" />
+                <CheckIcon size={10} className="text-[#3fb950]" />
               </span>
               <span className="leading-snug">{item}</span>
             </li>
@@ -84,14 +79,14 @@ export default function DisclaimerModal({ onAgree }) {
         </ul>
 
         {/* Placeholder note */}
-        <div className="mb-6 px-4 py-3 rounded-xl text-xs text-gray-500 leading-relaxed"
+        <div className="mb-6 px-4 py-3 rounded-md text-xs text-[#6e7681] leading-relaxed"
              style={{
-               background: 'rgba(251,191,36,0.06)',
-               borderLeft: '3px solid rgba(251,191,36,0.5)',
+               background: 'rgba(210,153,34,0.06)',
+               borderLeft: '3px solid rgba(210,153,34,0.4)',
              }}>
           All commands use{' '}
-          <code className="text-amber-300 font-mono">[TARGET_URL]</code> and{' '}
-          <code className="text-amber-300 font-mono">[ATTACKER_IP]</code> placeholders.
+          <code className="text-[#d29922] font-mono">[TARGET_URL]</code> and{' '}
+          <code className="text-[#d29922] font-mono">[ATTACKER_IP]</code> placeholders.
         </div>
 
         {/* Checkbox — a native input stretched over the whole row keeps keyboard,
@@ -105,15 +100,15 @@ export default function DisclaimerModal({ onAgree }) {
             className="peer opacity-0 absolute inset-0 w-full h-full cursor-pointer"
           />
           <div
-            className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0
-                        border-white/15 bg-white/[0.03] group-hover:border-white/30
-                        peer-checked:border-accent-indigo peer-checked:bg-accent-indigo/20
-                        peer-focus-visible:border-accent-indigo
-                        transition-all duration-200`}
+            className={`w-5 h-5 rounded border flex items-center justify-center shrink-0
+                        border-dark-border bg-dark-card2 group-hover:border-[#484f58]
+                        peer-checked:border-[#58a6ff] peer-checked:bg-[#58a6ff]/20
+                        peer-focus-visible:border-[#58a6ff]
+                        transition-colors duration-150`}
           >
-            {checked && <CheckIcon size={11} className="text-accent-indigo" />}
+            {checked && <CheckIcon size={11} className="text-[#58a6ff]" />}
           </div>
-          <span className="text-sm text-gray-400 group-hover:text-gray-300 transition-colors">
+          <span className="text-sm text-[#8b949e] group-hover:text-gray-300 transition-colors">
             I understand and agree to use this tool responsibly
           </span>
         </label>

@@ -165,7 +165,7 @@ export default function CompareView({ onReset }) {
             <div className="absolute inset-0 rounded-full border-2 border-dark-border" />
             <div className="absolute inset-0 rounded-full border-2 border-t-accent-cyan animate-spin-slow" />
           </div>
-          <p className="text-sm animate-pulse">Fetching vulnerability intelligence…</p>
+          <p className="text-sm">Fetching vulnerability intelligence…</p>
         </div>
       )}
 
@@ -190,7 +190,7 @@ export default function CompareView({ onReset }) {
                 <div className="grid grid-cols-[150px_repeat(3,minmax(120px,1fr))] gap-3 items-center">
                   <span className="text-xs text-gray-500">Risk score</span>
                   {rows.map(r => {
-                    const c = { P1: '#f43f5e', P2: '#fb923c', P3: '#facc15', P4: '#34d399' }[r.risk?.priority] || '#a78bfa'
+                    const c = { P1: '#f85149', P2: '#db6d28', P3: '#d29922', P4: '#3fb950' }[r.risk?.priority] || '#58a6ff'
                     return <Meter key={r.cve_id} value={r.risk?.score || 0} max={maxRisk} color={c} />
                   })}
                 </div>
@@ -207,7 +207,7 @@ export default function CompareView({ onReset }) {
                   <span className="text-xs text-gray-500">EPSS</span>
                   {rows.map(r => (
                     <Meter key={r.cve_id} value={r.epss?.score ? Math.round(r.epss.score * 100) : 0}
-                           max={Math.round(maxEpss * 100)} color="#a78bfa" />
+                           max={Math.round(maxEpss * 100)} color="#58a6ff" />
                   ))}
                 </div>
 
@@ -291,7 +291,7 @@ export default function CompareView({ onReset }) {
 function PriorityPill({ p }) {
   const s = PRIORITY_STYLES[p] || PRIORITY_STYLES.P4
   return (
-    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold border ${s.text} ${s.bg} ${s.border}`}>
+    <span className={`inline-flex px-2 py-0.5 rounded text-xs font-semibold border ${s.text} ${s.bg} ${s.border}`}>
       {p}
     </span>
   )

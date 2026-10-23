@@ -22,7 +22,7 @@ const SORT_KEYS = {
 function PriorityBadge({ priority }) {
   const s = PRIORITY_STYLES[priority] || PRIORITY_STYLES.P4
   return (
-    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold border ${s.text} ${s.bg} ${s.border}`}>
+    <span className={`inline-flex px-2 py-0.5 rounded text-xs font-semibold border ${s.text} ${s.bg} ${s.border}`}>
       {priority}
     </span>
   )
@@ -44,7 +44,7 @@ function Row({ r, onSelect }) {
         )}
       </div>
       <span className={`text-sm font-semibold ${sev.text}`}>{r.best_cvss?.score ?? '—'}</span>
-      <span className="text-xs text-purple-400">
+      <span className="text-xs text-[#58a6ff]">
         {r.epss?.score != null ? `${(r.epss.score * 100).toFixed(1)}%` : '—'}
       </span>
       <span className="text-[10px] text-red-400 font-medium">
@@ -195,7 +195,7 @@ export default function BatchView({ onSelect }) {
             <div className="absolute inset-0 rounded-full border-2 border-dark-border" />
             <div className="absolute inset-0 rounded-full border-2 border-t-accent-cyan animate-spin-slow" />
           </div>
-          <p className="text-sm animate-pulse">Fetching vulnerability intelligence…</p>
+          <p className="text-sm">Fetching vulnerability intelligence…</p>
         </div>
       )}
 
