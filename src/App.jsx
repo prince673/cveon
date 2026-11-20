@@ -7,6 +7,7 @@ import VulnerabilityCard    from './components/VulnerabilityCard'
 import Footer               from './components/Footer'
 import RiskScoreCard        from './components/RiskScoreCard'
 import ExploitabilityCard   from './components/ExploitabilityCard'
+import BuyMeACoffee          from './components/BuyMeACoffee'
 import { lookupCVE }        from './services/api'
 
 // Heavy views load on demand: ExploitationGuide pulls in the 95KB guide
@@ -181,7 +182,10 @@ export default function App() {
 
         <Suspense fallback={<LoadingSpinner message="Loading…" />}>
           {view === VIEWS.HOME && (
-            <InputForm onSubmit={handleSearch} loading={loading} />
+            <>
+              <BuyMeACoffee />
+              <InputForm onSubmit={handleSearch} loading={loading} />
+            </>
           )}
 
           {view === VIEWS.RESULTS && (
