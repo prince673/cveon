@@ -1,6 +1,7 @@
-import { useState, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { batchLookup } from '../services/api'
 import { getSeverity } from '../utils/formatters'
+import { resultsToCsv, downloadCsv } from '../utils/csv'
 import { ListIcon, UploadIcon, SearchIcon, ArrowLeftIcon } from './icons'
 
 const CVE_REGEX = /^CVE-\d{4}-\d{4,}$/i
@@ -28,6 +29,102 @@ function PriorityBadge({ priority }) {
   )
 }
 
+const RING_COLORS = { P1: '#f85149', P2: '#db6d28', P3: '#d29922', P4: '#3fb950' }
+
+/**
+ * Tiny 270° risk ring shown inline in each batch row. Sweeps from 0 to the
+ * score on mount; reduced-motion users get the final value instantly (the
+ * global reduced-motion CSS kills the transition).
+ */
+function MiniRing({ score, priority }) {
+  const [live, setLive] = useState(false)
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setLive(true))
+    return () => cancelAnimationFrame(id)
+  }, [])
+
+  const color = RING_COLORS[priority] || '#8b949e'
+  const C = 2 * Math.PI * 11
+  const ARC = 0.75
+  const dash = (live ? Math.min(score, 100) / 100 : 0) * ARC * C
+  return (
+    <div className="relative w-7 h-7 shrink-0" title={`Risk ${score}/100 (${priority || '—'})`}>
+      <svg viewBox="0 0 28 28" className="w-7 h-7" style={{ transform: 'rotate(135deg)' }} aria-hidden="true">
+        <circle cx="14" cy="14" r="11" fill="none" stroke="#21262d" strokeWidth="3"
+                strokeDasharray={`${ARC * C} ${C}`} strokeLinecap="round" />
+        <circle
+          cx="14" cy="14" r="11" fill="none"
+          stroke={color} strokeWidth="3"
+          strokeDasharray={`${dash} ${C}`}
+          strokeLinecap="round"
+          style={{ transition: 'stroke-dasharray 0.9s cubic-bezier(0.22, 1, 0.36, 1)' }}
+        />
+      </svg>
+      <span
+        className="absolute inset-0 flex items-center justify-center text-[8px] font-bold font-mono tabular-nums"
+        style={{ color }}
+      >
+        {score}
+      </span>
+    </div>
+  )
+}
+
+/**
+ * Stacked P1-P4 risk distribution bar with a count legend. Segment widths
+ * animate on mount and re-animate live when the priority filter changes
+ * the visible mix.
+ */
+function RiskDistribution({ rows }) {
+  const [live, setLive] = useState(false)
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setLive(true))
+    return () => cancelAnimationFrame(id)
+  }, [])
+
+  const counts = { P1: 0, P2: 0, P3: 0, P4: 0 }
+  for (const r of rows) {
+    const p = r.risk?.priority
+    if (p && counts[p] != null) counts[p] += 1
+  }
+  const total = Math.max(rows.length, 1)
+
+  return (
+    <div className="mb-4">
+      <div className="flex items-center justify-between mb-1.5">
+        <span className="section-label">Risk distribution</span>
+        <span className="text-[10px] font-mono text-gray-500">{rows.length} analyzed</span>
+      </div>
+      <div
+        className="flex h-2.5 rounded-full overflow-hidden bg-dark-bg gap-px"
+        role="img"
+        aria-label={'Risk distribution: ' + ['P1', 'P2', 'P3', 'P4'].map(p => `${p} ${counts[p]}`).join(', ')}
+      >
+        {['P1', 'P2', 'P3', 'P4'].map(p =>
+          counts[p] > 0 ? (
+            <div
+              key={p}
+              className="h-full transition-all duration-700"
+              style={{ width: live ? `${(counts[p] / total) * 100}%` : '0%', background: RING_COLORS[p] }}
+              title={`${p}: ${counts[p]}`}
+            />
+          ) : null
+        )}
+      </div>
+      <div className="flex items-center gap-3 mt-1.5">
+        {['P1', 'P2', 'P3', 'P4'].map(p => (
+          <span key={p} className="inline-flex items-center gap-1 text-[10px] text-gray-500">
+            <span className="w-2 h-2 rounded-sm" style={{ background: RING_COLORS[p] }} aria-hidden="true" />
+            {p} · {counts[p]}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function Row({ r, onSelect }) {
   const sev = getSeverity(r.best_cvss?.score)
   return (
@@ -50,7 +147,10 @@ function Row({ r, onSelect }) {
       <span className="text-[10px] text-red-400 font-medium">
         {r.kev ? 'KEV' : ''}
       </span>
-      <PriorityBadge priority={r.risk?.priority} />
+      <span className="flex items-center gap-1.5">
+        <MiniRing score={r.risk?.score || 0} priority={r.risk?.priority} />
+        <PriorityBadge priority={r.risk?.priority} />
+      </span>
       <span className="hidden md:flex items-center gap-1.5 text-accent-cyan text-xs justify-end">
         View <ArrowLeftIcon size={12} className="rotate-180" />
       </span>
@@ -137,7 +237,7 @@ export default function BatchView({ onSelect }) {
         <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-white/[0.06] border border-dark-border text-gray-400">
           <ListIcon size={15} />
         </span>
-        <h2 className="text-base font-semibold text-white">Batch CVE analysis</h2>
+        <h2 className="text-base font-semibold text-gray-100">Batch CVE analysis</h2>
       </header>
 
       <section className="card">
@@ -174,7 +274,7 @@ export default function BatchView({ onSelect }) {
               onClick={() => fileRef.current?.click()}
               className="btn-ghost shrink-0"
             >
-              <UploadIcon size={15} /> Upload .txt
+              <UploadIcon size={15} /> Upload .txt / .csv
             </button>
             <input
               ref={fileRef}
@@ -202,11 +302,18 @@ export default function BatchView({ onSelect }) {
       {results && !loading && (
         <section className="card">
           <div className="flex flex-wrap items-center gap-3 mb-4">
-            <h3 className="text-sm font-semibold text-white">Results</h3>
+            <h3 className="text-sm font-semibold text-gray-100">Results</h3>
             <span className="text-xs text-gray-500">
               {results.results.length} found · {results.errors.length} failed
             </span>
             <div className="ml-auto flex items-center gap-1.5">
+              <button
+                onClick={() => downloadCsv(`cveon-batch-${new Date().toISOString().slice(0, 10)}.csv`, resultsToCsv(results.results))}
+                className="btn-ghost !px-2.5 !py-1 text-xs"
+                title="Download the results table as CSV — generated in your browser, nothing uploaded"
+              >
+                Export CSV
+              </button>
               {['ALL', 'P1', 'P2', 'P3', 'P4'].map(p => (
                 <button
                   key={p}
@@ -223,13 +330,16 @@ export default function BatchView({ onSelect }) {
             </div>
           </div>
 
+          {/* P1-P4 mix of the full result set */}
+          <RiskDistribution rows={all} />
+
           {results.errors.length > 0 && (
             <div className="mb-4 p-3 rounded-lg border border-yellow-500/30 bg-yellow-500/[0.06]">
               <p className="text-xs text-yellow-300 mb-1">Some CVEs could not be resolved:</p>
               <div className="flex flex-wrap gap-1.5">
                 {results.errors.map(e => (
                   <span key={e.cve_id} className="text-[11px] font-mono text-gray-400 bg-dark-bg border border-dark-border rounded px-1.5 py-0.5">
-                    {e.cve_id} — {e.error}
+                    {e.cve_id} — {e.detail}
                   </span>
                 ))}
               </div>

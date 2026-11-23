@@ -19,6 +19,46 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
+/**
+ * Typed API failure. `kind` lets the UI render the right message and retry
+ * affordance instead of one generic "search failed" wall of text.
+ *   rate_limit — upstream feeds are throttling anonymous requests
+ *   not_found  — the CVE ID does not exist in NVD or CIRCL
+ *   network    — requests never made it out (offline, DNS, CORS)
+ */
+export class ApiError extends Error {
+  constructor(kind, message) {
+    super(message)
+    this.name = 'ApiError'
+    this.kind = kind
+  }
+}
+
+export function describeApiError(err) {
+  switch (err?.kind) {
+    case 'rate_limit':
+      return {
+        title: 'Rate limited by public feeds',
+        hint: 'The anonymous NVD/CIRCL quotas are momentarily exhausted. Wait a few seconds, then retry.',
+      }
+    case 'network':
+      return {
+        title: 'Network error',
+        hint: 'Requests to the public feeds never completed. Check your connection, then retry.',
+      }
+    case 'not_found':
+      return {
+        title: 'Vulnerability not found',
+        hint: 'No record for this CVE ID exists in NVD or CIRCL. Double-check the identifier.',
+      }
+    default:
+      return {
+        title: 'Lookup failed',
+        hint: 'The public intelligence feeds did not return usable data for this CVE.',
+      }
+  }
+}
+
 function getRetryDelayMs(attempt, retryAfterHeader) {
   const retryAfter = parseFloat(retryAfterHeader)
   if (Number.isFinite(retryAfter)) {
@@ -145,6 +185,85 @@ async function fetchKevCatalog() {
 }
 
 /**
+ * Full KEV catalog as an array (newest additions first) for the #/kev feed
+ * view. Served from the same in-RAM catalog cache used during lookups.
+ */
+export async function getKevFeed() {
+  const catalog = await fetchKevCatalog()
+  return Object.entries(catalog)
+    .map(([cve_id, v]) => ({ cve_id, ...v }))
+    .sort((a, b) => String(b.date_added || '').localeCompare(String(a.date_added || '')))
+}
+
+/**
+ * Just the size of the KEV catalog — used by the header threat ticker.
+ * Shares the in-RAM cache, so this is free after the first fetch.
+ * Pass { refresh: true } to drop the cache and re-fetch from CISA's feed
+ * (used by the ticker's periodic re-check).
+ */
+export async function getKevCount({ refresh = false } = {}) {
+  if (refresh) {
+    kevCatalogCache = null
+    kevFetchPromise = null
+  }
+  const catalog = await fetchKevCatalog()
+  return Object.keys(catalog).length
+}
+
+/**
+ * The N most recently published CVEs from NVD (last 60 days, newest first).
+ * Shared by the notification bell and the home "latest intelligence" strip.
+ * Throws on failure so callers can render their own error states.
+ */
+export async function fetchLatestCves(limit = 8) {
+  const sixtyDaysAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .split('T')[0]
+  const url =
+    'https://services.nvd.nist.gov/rest/json/cves/2.0?' +
+    new URLSearchParams({
+      resultsPerPage: String(limit),
+      startIndex: '0',
+      sortBy: 'pubDate',
+      sortOrder: 'desc',
+      pubStartDate: sixtyDaysAgo,
+    })
+  const resp = await fetchWithRetry(url, { headers: { Accept: 'application/json' } })
+  if (!resp.ok) throw new Error('NVD feed unavailable')
+  const data = await resp.json()
+  return (data.vulnerabilities || []).map(v => {
+    const cve = v.cve || {}
+    const desc =
+      (cve.descriptions || []).find(d => d.lang === 'en')?.value || 'No description.'
+    const metrics = cve.metrics || {}
+    const cvss =
+      metrics.cvssMetricV31?.[0] ||
+      metrics.cvssMetricV40?.[0] ||
+      metrics.cvssMetricV30?.[0] ||
+      null
+    return {
+      id: cve.id,
+      description: desc,
+      published: cve.published,
+      score: cvss?.cvssData?.baseScore ?? null,
+      severity: cvss?.cvssData?.baseSeverity || null,
+    }
+  })
+}
+
+/**
+ * The N most recently added KEV entries — used by the ticker's hover
+ * dropdown. Reads from the same in-RAM cache the ticker keeps fresh.
+ */
+export async function getKevRecent(limit = 5) {
+  const catalog = await fetchKevCatalog()
+  return Object.entries(catalog)
+    .map(([cve_id, v]) => ({ cve_id, ...v }))
+    .sort((a, b) => String(b.date_added || '').localeCompare(String(a.date_added || '')))
+    .slice(0, limit)
+}
+
+/**
  * Fetch EPSS score from FIRST.org.
  */
 async function fetchEpss(cveId) {
@@ -195,6 +314,12 @@ async function fetchExploits(cveId) {
  * Fetch CVE details from NIST NVD API 2.0 with fallback to CIRCL API.
  */
 async function fetchCveRaw(cveId) {
+  // Failure-mode tracking so the UI can distinguish "typo" from "throttled"
+  // from "offline" instead of showing one generic error.
+  let sawRateLimit = false
+  let sawNetworkError = false
+  let sawEmptyResult = false
+
   // Try NIST NVD v2.0 first
   try {
     const nvdResp = await fetchWithRetry(
@@ -207,9 +332,13 @@ async function fetchCveRaw(cveId) {
       if (vuln) {
         return normalizeNvd(vuln)
       }
+      sawEmptyResult = true
+    } else if (nvdResp.status === 403 || nvdResp.status === 429) {
+      sawRateLimit = true
     }
   } catch {
     // NVD failed or throttled, fall through to CIRCL
+    sawNetworkError = true
   }
 
   // Fallback to CIRCL
@@ -220,12 +349,25 @@ async function fetchCveRaw(cveId) {
       if (data && (data.id || data.summary)) {
         return normalizeCircl(data)
       }
+      sawEmptyResult = true
+    } else if (circlResp.status === 403 || circlResp.status === 429) {
+      sawRateLimit = true
     }
   } catch {
     // CIRCL also failed
+    sawNetworkError = true
   }
 
-  throw new Error(`Vulnerability ${cveId} could not be retrieved from public intelligence feeds.`)
+  if (sawRateLimit) {
+    throw new ApiError('rate_limit', `Public feeds are rate limiting requests for ${cveId}.`)
+  }
+  if (sawEmptyResult && !sawNetworkError) {
+    throw new ApiError('not_found', `Vulnerability ${cveId} was not found in NVD or CIRCL.`)
+  }
+  if (sawNetworkError) {
+    throw new ApiError('network', `Could not reach the public intelligence feeds for ${cveId}.`)
+  }
+  throw new ApiError('not_found', `Vulnerability ${cveId} could not be retrieved from public intelligence feeds.`)
 }
 
 function normalizeNvd(data) {

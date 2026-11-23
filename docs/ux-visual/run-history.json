@@ -1,0 +1,8 @@
+{
+  "run": 1,
+  "date": "2026 session",
+  "surfaces": ["home", "results", "batch", "compare", "kev"],
+  "clustersFixed": ["A signal-overflow", "B latestintel-error-state", "C hit-targets", "D meta-contrast", "E disabled-button"],
+  "clustersDeferred": ["F type-scale-sprawl (P3)"],
+  "verification": "lint clean, 89/89 tests, build ok, DOM re-measures pass"
+}

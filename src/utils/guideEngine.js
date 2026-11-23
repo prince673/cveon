@@ -225,6 +225,7 @@ function classifyByProducts(products, desc) {
 }
 
 export function classifyVulnerability(cveData) {
+  cveData = cveData || {}
   const allResults = []
   const allEvidence = []
 
@@ -291,6 +292,7 @@ export function selectGuideKey(cveData) {
 }
 
 export function buildGuide(cveData) {
+  cveData = cveData || {}
   const classification = classifyVulnerability(cveData)
   const key = classification.primary
   const template = GUIDES[key] || GUIDES.generic

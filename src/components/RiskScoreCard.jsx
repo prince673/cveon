@@ -13,8 +13,8 @@ function SignalBar({ signal }) {
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center gap-3">
-        <span className="text-xs text-[#8b949e] w-28 shrink-0 truncate">{signal.label}</span>
-        <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: '#21262d' }}>
+        <span className="text-xs text-[#8b949e] w-28 shrink-0 leading-snug">{signal.label}</span>
+        <div className="flex-1 h-2 rounded-full overflow-hidden bg-dark-card2">
           <div
             className="h-full rounded-full transition-all duration-500"
             style={{
@@ -23,11 +23,13 @@ function SignalBar({ signal }) {
             }}
           />
         </div>
-        <span className="text-xs text-[#6e7681] w-12 text-right font-mono tabular-nums">{signal.value}/{signal.max}</span>
-        <span className="text-[10px] text-[#484f58] w-10 text-right shrink-0">{signal.weight}</span>
+        <span className="text-xs text-[#8b949e] w-12 text-right font-mono tabular-nums">{signal.value}/{signal.max}</span>
+        <span className="text-[10px] text-[#8b949e] w-12 text-right shrink-0" title={`Weight ${signal.weight}`}>
+          {Math.round(pct)}%
+        </span>
       </div>
       {signal.reason && (
-        <div className="pl-28 text-[11px] text-[#6e7681]">{signal.reason}</div>
+        <div className="pl-28 text-[11px] text-[#8b949e]">{signal.reason}</div>
       )}
     </div>
   )
@@ -52,14 +54,19 @@ function TrendIndicator({ trends }) {
   )
 }
 
-export default function RiskScoreCard({ risk }) {
+export default function RiskScoreCard({ risk, delayMs = 0 }) {
   if (!risk) return null
 
   const pStyle = PRIORITY_STYLES[risk.priority] || PRIORITY_STYLES.P4
   const circumference = 2 * Math.PI * 34
+  // 270° gauge: the arc spans 3/4 of the circle with the gap at the bottom.
+  const ARC_SPAN = 0.75
 
   return (
-    <div className="card mb-5">
+    <div
+      className="card mb-5"
+      style={delayMs ? { animationDelay: `${delayMs}ms` } : undefined}
+    >
       {/* Card header */}
       <div className="flex items-center gap-2 mb-5">
         <span className="section-label">Risk Assessment</span>
@@ -70,35 +77,48 @@ export default function RiskScoreCard({ risk }) {
 
       <div className="flex flex-wrap items-start gap-6 mb-5">
 
-        {/* Score ring */}
+        {/* Score gauge — 270° arc with round caps, gap at the bottom */}
         <div className="flex flex-col items-center gap-3">
           <div className="relative w-28 h-28">
-            <svg className="w-28 h-28 -rotate-90" viewBox="0 0 80 80">
-              <circle cx="40" cy="40" r="34" fill="none" stroke="#21262d" strokeWidth="5.5" />
+            <svg
+              className="w-28 h-28"
+              viewBox="0 0 80 80"
+              style={{ transform: 'rotate(135deg)' }}
+              role="img"
+              aria-label={`Risk score ${risk.score} out of 100`}
+            >
+              <circle
+                cx="40" cy="40" r="34" fill="none"
+                stroke="#21262d" strokeWidth="6"
+                strokeDasharray={`${ARC_SPAN * circumference} ${circumference}`}
+                strokeLinecap="round"
+              />
               <circle
                 cx="40" cy="40" r="34" fill="none"
                 stroke={pStyle.ring}
-                strokeWidth="5.5"
-                strokeDasharray={`${(risk.score / 100) * circumference} ${circumference}`}
-                strokeLinecap="butt"
+                strokeWidth="6"
+                strokeDasharray={`${(risk.score / 100) * ARC_SPAN * circumference} ${circumference}`}
+                strokeLinecap="round"
                 className="transition-all duration-1000"
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className="text-3xl font-bold font-mono tabular-nums" style={{ color: pStyle.ring }}>{risk.score}</span>
-              <span className="text-[10px] text-[#6e7681] -mt-0.5">/ 100</span>
+              <span className="text-[10px] text-[#8b949e] -mt-0.5">/ 100</span>
             </div>
           </div>
 
-          <div className={`px-4 py-1.5 rounded border text-sm font-bold tracking-wide ${pStyle.text} ${pStyle.border}`}
+          <div className={`px-4 py-1.5 rounded-md border text-sm font-bold tracking-wide ${pStyle.text} ${pStyle.border} ${risk.priority === 'P1' ? 'shadow-[0_0_18px_rgba(248,81,73,0.4)] animate-glow-breathe' : ''}`}
                style={{ background: pStyle.bg }}>
             {risk.priority}
           </div>
-          <span className="text-[10px] text-[#6e7681] uppercase tracking-widest">{risk.level} risk</span>
+          <span className="text-[10px] text-[#8b949e] uppercase tracking-widest">{risk.level} risk</span>
         </div>
 
-        {/* Signal bars */}
-        <div className="flex-1 min-w-0 space-y-3">
+        {/* Signal bars — full width below the gauge: the card lives in the
+            narrow right rail, so a side-by-side layout would squeeze the
+            rows past the card edge */}
+        <div className="w-full min-w-0 space-y-3">
           <div className="section-label mb-3">Signal breakdown</div>
           {risk.signals?.map((s, i) => (
             <SignalBar key={i} signal={s} />
@@ -108,8 +128,7 @@ export default function RiskScoreCard({ risk }) {
 
       {/* Reasons */}
       {risk.reasons?.length > 0 && (
-        <div className="mb-4 p-4 rounded-md"
-             style={{ background: '#0d1117', border: '1px solid #30363d' }}>
+        <div className="inset-panel mb-4 p-4">
           <div className="section-label mb-3">Why this priority?</div>
           <ul className="space-y-2">
             {risk.reasons.map((r, i) => (

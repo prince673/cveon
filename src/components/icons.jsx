@@ -81,3 +81,23 @@ export const UploadIcon = (p) => (
 export const SortIcon = (p) => (
   <Icon {...p}><path d="m7 8 5-5 5 5" /><path d="m7 16 5 5 5-5" /></Icon>
 )
+
+export const CoffeeIcon = (p) => (
+  <Icon {...p}><path d="M17 8h1a3 3 0 0 1 0 6h-1" /><path d="M3 8h14v6a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5V8Z" /><path d="M7 2v2" /><path d="M11 2v2" /></Icon>
+)
+
+export const PinIcon = (p) => (
+  <Icon {...p}><path d="M12 17v5" /><path d="M9 3h6l-1 6 3 3H7l3-3-1-6Z" /></Icon>
+)
+
+export const ShareIcon = (p) => (
+  <Icon {...p}><circle cx="6" cy="12" r="2.5" /><circle cx="18" cy="6" r="2.5" /><circle cx="18" cy="18" r="2.5" /><path d="m8.2 10.9 7.6-3.8" /><path d="m8.2 13.1 7.6 3.8" /></Icon>
+)
+
+export const SunIcon = (p) => (
+  <Icon {...p}><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></Icon>
+)
+
+export const CommandIcon = (p) => (
+  <Icon {...p}><path d="M15 6a3 3 0 1 1 3 3h-3V6Z" /><path d="M9 6a3 3 0 1 0-3 3h3V6Z" /><path d="M15 18a3 3 0 1 0 3-3h-3v3Z" /><path d="M9 18a3 3 0 1 1-3-3h3v3Z" /><rect x="9" y="9" width="6" height="6" /></Icon>
+)
